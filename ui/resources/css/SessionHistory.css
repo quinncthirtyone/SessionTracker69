@@ -55,7 +55,6 @@ td {
 
 .game-cell span {
   font-weight: bold;
-  text-transform: uppercase;
 }
 
 #sessionHistoryTable td:nth-child(1) {
