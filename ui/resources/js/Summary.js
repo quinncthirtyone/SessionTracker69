@@ -81,7 +81,14 @@ function updateSummayChart() {
       scales: {
         y: {
           type: "log2",
-          title: chartTitleConfig("PlayTime (Hours)")
+          title: chartTitleConfig("PlayTime (Hours)"),
+          ticks: {
+            callback: function (value, index, values) {
+              if (Math.floor(value) === value) {
+                return value + "h";
+              }
+            },
+          },
         },
         x: {
           type: "log2",
