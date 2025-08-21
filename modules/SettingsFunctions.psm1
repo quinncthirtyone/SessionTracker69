@@ -1,4 +1,4 @@
-﻿function FilterListBox {
+function FilterListBox {
     param(
         [string]$filterText,
         [System.Windows.Forms.ListBox]$listBox,
@@ -301,7 +301,7 @@ function RenderEditPlatformForm($PlatformsList) {
     [void] $listBox.Items.AddRange($PlatformsList)
 
     $labelSearch = Createlabel "Search:" 400 20; $editPlatformForm.Controls.Add($labelSearch)
-    $textSearch = CreateTextBox "" 465 20 160 20; $editPlatformForm.Controls.Add($textSearch)
+    $textSearch = CreateTextBox "" 465 20 160 20; $editGameForm.Controls.Add($textSearch)
 
     $textSearch.Add_TextChanged({
             FilterListBox -filterText $textSearch.Text -listBox $listBox -originalItems $PlatformsList
@@ -454,7 +454,7 @@ function RenderEditPlatformForm($PlatformsList) {
     $listBox.SelectedIndex = 0
 
     $editPlatformForm.ShowDialog()
-    $textSearch.Remove_TextChanged({})
+    $textSearch.Remove_SelectedIndexChanged({})
     $listBox.Remove_SelectedIndexChanged({})
     $editPlatformForm.Dispose()
 }
@@ -611,20 +611,20 @@ function RenderGamingPCForm($PCList) {
 
     $labelStartDate = Createlabel "Start Date" 190 80; $gamingPCForm.Controls.Add($labelStartDate)
     $startDatePicker = New-Object Windows.Forms.DateTimePicker
-    $startDatePicker.Location = “170, 100”
-    $startDatePicker.Width = “100”
+    $startDatePicker.Location = New-Object System.Drawing.Point(170, 100)
+    $startDatePicker.Width = 100
     $startDatePicker.MaxDate = [DateTime]::Today
     $startDatePicker.Format = [windows.forms.datetimepickerFormat]::custom
-    $startDatePicker.CustomFormat = “dd/MM/yyyy”
+    $startDatePicker.CustomFormat = "dd/MM/yyyy"
     $gamingPCForm.Controls.Add($startDatePicker)
 
     $labelEndDate = Createlabel "End Date" 360 80; $gamingPCForm.Controls.Add($labelEndDate)
     $endDatePicker = New-Object Windows.Forms.DateTimePicker
-    $endDatePicker.Location = “335, 100”
-    $endDatePicker.Width = “100”
+    $endDatePicker.Location = New-Object System.Drawing.Point(335, 100)
+    $endDatePicker.Width = 100
     $endDatePicker.MaxDate = [DateTime]::Today
     $endDatePicker.Format = [windows.forms.datetimepickerFormat]::custom
-    $endDatePicker.CustomFormat = “dd/MM/yyyy”
+    $endDatePicker.CustomFormat = "dd/MM/yyyy"
     $gamingPCForm.Controls.Add($endDatePicker)
 
     $labelCurrent = Createlabel "Current PC" 273 122; $gamingPCForm.Controls.Add($labelCurrent)
@@ -639,7 +639,12 @@ function RenderGamingPCForm($PCList) {
     $pictureBox = CreatePictureBox $imagePath 10 20 150 150 "zoom"
     $gamingPCForm.Controls.Add($pictureBox)
 
+    $buttonUpdate = CreateButton "Update" 265 190
+    $buttonRemove = CreateButton "Delete" 360 150
+
     $listBox.Add_SelectedIndexChanged({
+            if ($null -eq $listBox.SelectedItem) { return }
+            
             $selectedPC = GetPCDetails $listBox.SelectedItem
 
             $textName.Text = $selectedPC.name
@@ -677,6 +682,8 @@ function RenderGamingPCForm($PCList) {
             $pictureBox.Image.Dispose()
             $pictureBox.Image = [System.Drawing.Image]::FromFile($imagePath)
 
+            $buttonUpdate.Enabled = $true
+            $buttonRemove.Enabled = $true
         })
     $gamingPCForm.Controls.Add($listBox)
     
@@ -696,7 +703,6 @@ function RenderGamingPCForm($PCList) {
         })
     $gamingPCForm.Controls.Add($buttonUpdateImage)
 
-    $buttonRemove = CreateButton "Delete" 360 150
     $buttonRemove.Add_Click({
             $PCName = $textName.Text
 
@@ -718,7 +724,6 @@ function RenderGamingPCForm($PCList) {
         })
     $gamingPCForm.Controls.Add($buttonRemove)
 
-    $buttonUpdate = CreateButton "Update" 265 190
     $buttonUpdate.Add_Click({
             $currentlySelectedIndex = $listBox.SelectedIndex
 
@@ -810,6 +815,9 @@ function RenderGamingPCForm($PCList) {
             $pictureBox.Image = [System.Drawing.Image]::FromFile($pictureBoxImagePath.Text)
             $startDatePicker.Value = [DateTime]::Today
             $endDatePicker.Value = [DateTime]::Today
+            
+            $buttonUpdate.Enabled = $false
+            $buttonRemove.Enabled = $false
         }); 
     $gamingPCForm.Controls.Add($buttonReset)
 
@@ -825,6 +833,14 @@ function RenderGamingPCForm($PCList) {
             $gamingPCForm.Dispose()
         }); 
     $gamingPCForm.Controls.Add($buttonCancel)
+
+    if ($listBox.Items.Count -gt 0) {
+        $listBox.SelectedIndex = 0
+    }
+    else {
+        $buttonUpdate.Enabled = $false
+        $buttonRemove.Enabled = $false
+    }
 
     $gamingPCForm.ShowDialog()
     $listBox.Remove_SelectedIndexChanged({})

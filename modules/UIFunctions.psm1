@@ -1,4 +1,4 @@
-﻿class Game {
+class Game {
     [ValidateNotNullOrEmpty()][string]$Icon
     [ValidateNotNullOrEmpty()][string]$Name
     [ValidateNotNullOrEmpty()][string]$Platform
@@ -241,12 +241,12 @@ function RenderSummary() {
     }
 
     $getGamingPCsQuery = "SELECT gp.*,
-                            SUM(dp.play_time) / 60 AS total_hours,
+                            COALESCE(SUM(dp.play_time) / 60, 0) AS total_hours,
                             CAST((julianday(COALESCE(datetime(gp.end_date, 'unixepoch'), datetime('now'))) - julianday(datetime(gp.start_date, 'unixepoch'))) / 365.25 AS INTEGER) AS age_years,
                             CAST((julianday(COALESCE(datetime(gp.end_date, 'unixepoch'), datetime('now'))) - julianday(datetime(gp.start_date, 'unixepoch'))) % 365.25 / 30.4375 AS INTEGER) AS age_months
                         FROM 
                             gaming_pcs gp
-                        JOIN 
+                        LEFT JOIN 
                             daily_playtime dp 
                         ON 
                             dp.play_date BETWEEN DATE(datetime(gp.start_date, 'unixepoch')) 
