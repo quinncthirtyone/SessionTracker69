@@ -315,8 +315,17 @@ function RenderSummary() {
     $summaryStatement = "<b>Duration: </b>$startDate - $endDate. <b>Games: </b>$($gamesSummaryData.total_games). <b>Sessions: </b>$($gamesSummaryData.total_sessions).<br><br><b>Play time: </b>$totalPlayTime. <b>Idle time: </b>$totalIdleTime."
 
     $summaryTable = $gamesPlayTimeVsSessionData | ConvertTo-Html -Fragment
+    if ($summaryTable) {
+        $summaryTable = $summaryTable.Replace('<table>', '<table><tbody>').Replace('</table>', '</tbody></table>')
+    }
     $pcTable = $gamingPCs | ConvertTo-Html -Fragment
+    if ($pcTable) {
+        $pcTable = $pcTable.Replace('<table>', '<table><tbody>').Replace('</table>', '</tbody></table>')
+    }
     $annualHoursTable = $totalAnnualGamingHoursData | ConvertTo-Html -Fragment
+    if ($annualHoursTable) {
+        $annualHoursTable = $annualHoursTable.Replace('<table>', '<table><tbody>').Replace('</table>', '</tbody></table>')
+    }
 
     $report = (Get-Content $workingDirectory\ui\templates\Summary.html.template) -replace "_SUMMARYTABLE_", $summaryTable
     $report = $report -replace "_SUMMARYSTATEMENT_", $summaryStatement
