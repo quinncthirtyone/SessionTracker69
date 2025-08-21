@@ -3,12 +3,7 @@
 
 let gamingData = [];
 let pcData = [];
-let annualHoursData = buildGamingData(
-  "Year",
-  "TotalPlayTime",
-  "annual-gaming-hours-table",
-  "table"
-);
+let annualHoursData;
 let currentPCIndex = 0;
 let finishedCount = 0;
 let inProgressCount = 0;
@@ -172,8 +167,8 @@ function loadPCDataFromTable() {
   const pcTable = document.getElementById("pc-table").querySelector("table");
   const pcRows = pcTable.querySelectorAll("tbody tr");
 
-  if (pcRows.length = 0) {
-    return
+  if (pcRows.length === 0) {
+    return;
   }
 
   pcData = Array.from(pcRows).map((row) => {
@@ -304,34 +299,46 @@ function updateAnnualHoursChart() {
   });
 }
 
-document.getElementById("prev-button").addEventListener("click", () => {
-  currentPCIndex = currentPCIndex - 1;
-  if (currentPCIndex < 0) {
-    currentPCIndex = pcData.length - 1; // Loop back to last element
+document.addEventListener("DOMContentLoaded", function () {
+  document.getElementById("prev-button").addEventListener("click", () => {
+    currentPCIndex = currentPCIndex - 1;
+    if (currentPCIndex < 0) {
+      currentPCIndex = pcData.length - 1; // Loop back to last element
+    }
+    updatePCStatsSection(pcData.at(currentPCIndex));
+  });
+
+  document.getElementById("next-button").addEventListener("click", () => {
+    currentPCIndex = currentPCIndex + 1;
+    if (currentPCIndex == pcData.length) {
+      currentPCIndex = 0; // Loop back to first element
+    }
+    updatePCStatsSection(pcData.at(currentPCIndex));
+  });
+
+  loadSummaryDataFromTable();
+  loadPCDataFromTable();
+
+  annualHoursData = buildGamingData(
+    "Year",
+    "TotalPlayTime",
+    "annual-gaming-hours-table",
+    "table"
+  );
+
+  if (pcData.length > 0) {
+    document.getElementById("no-pcs-msg").style.display = "none";
+    updatePCStatsSection(pcData.at(currentPCIndex));
+  } else {
+    $("#pc-icon").html(
+      DOMPurify.sanitize(`<img src=".\resources\images\pc.png">`)
+    );
+    document.getElementById("pc-icon").querySelector("img").style.border =
+      "none";
+    document.getElementById("pc-navigation-bar").style.display = "none";
+    document.getElementById("pc-stat-disclaimer").style.display = "none";
   }
-  updatePCStatsSection(pcData.at(currentPCIndex));
+
+  updateAnnualHoursChart();
+  updateSummayChart();
 });
-
-document.getElementById("next-button").addEventListener("click", () => {
-  currentPCIndex = currentPCIndex + 1;
-  if (currentPCIndex == pcData.length) {
-    currentPCIndex = 0; // Loop back to first element
-  }
-  updatePCStatsSection(pcData.at(currentPCIndex));
-});
-
-loadSummaryDataFromTable();
-loadPCDataFromTable();
-
-if (pcData.length > 0) {
-  document.getElementById("no-pcs-msg").style.display = "none";
-  updatePCStatsSection(pcData.at(currentPCIndex));
-} else {
-  $("#pc-icon").html(DOMPurify.sanitize(`<img src=".\resources\images\pc.png">`));
-  document.getElementById("pc-icon").querySelector("img").style.border = "none";
-  document.getElementById("pc-navigation-bar").style.display = "none";
-  document.getElementById("pc-stat-disclaimer").style.display = "none";
-}
-
-updateAnnualHoursChart();
-updateSummayChart();
