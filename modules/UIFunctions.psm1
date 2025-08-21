@@ -335,7 +335,7 @@ function RenderIdleTime() {
 
     $workingDirectory = (Get-Location).Path
 
-    $getGamesIdleTimeDataQuery = "SELECT name, idle_time as time FROM games WHERE idle_time > 0 ORDER BY idle_time DESC"
+    $getGamesIdleTimeDataQuery = "SELECT name, ROUND(idle_time / 60.0, 2) as time FROM games WHERE idle_time > 0 ORDER BY idle_time DESC"
     $gamesIdleTimeData = RunDBQuery $getGamesIdleTimeDataQuery
     if ($gamesIdleTimeData.Length -eq 0) {
         if(-Not $InBackground) {

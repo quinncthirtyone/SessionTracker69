@@ -53,21 +53,29 @@ function updateChart(gameCount, labelText) {
           },
         },
         x: {
-          type: "linear", // Use a standard linear axis
+          type: "linear",
           title: chartTitleConfig(labelText, 15),
+          ticks: {
+            stepSize: 1,
+            callback: function (value) {
+              if (Math.floor(value) === value) {
+                return value + "h";
+              }
+            },
+          },
         },
       },
       plugins: {
         tooltip: {
           enabled: true,
           callbacks: {
-            label: function(context) {
+            label: function (context) {
               const value = context.raw;
-              const hours = Math.floor(value / 60);
-              const minutes = value % 60;
+              const hours = Math.floor(value);
+              const minutes = Math.round((value - hours) * 60);
               return `${hours}h ${minutes}m`;
-            }
-          }
+            },
+          },
         },
         legend: {
           display: false,
@@ -79,8 +87,8 @@ function updateChart(gameCount, labelText) {
             if (value === 0) {
               return "";
             }
-            const hours = Math.floor(value / 60);
-            const minutes = value % 60;
+            const hours = Math.floor(value);
+            const minutes = Math.round((value - hours) * 60);
             return `${hours}h ${minutes}m`;
           },
           color: "#000000",
@@ -88,7 +96,7 @@ function updateChart(gameCount, labelText) {
             family: "monospace",
           },
         },
-      }
+      },
     },
   });
 }
