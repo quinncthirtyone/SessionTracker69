@@ -43,7 +43,7 @@ function RenderEditGameForm($GamesList) {
     $textName = CreateTextBox "" 245 20 300 20;	$editGameForm.Controls.Add($textName)
 
     $labelExe = Createlabel "Exe:" 170 60; $editGameForm.Controls.Add($labelExe)
-    $textExe = CreateTextBox "" 245 60 200 20; $textExe.ReadOnly = $true; $editGameForm.Controls.Add($textExe)
+    $textExe = CreateTextBox "" 245 60 200 20; $editGameForm.Controls.Add($textExe)
 
     $labelPlatform = Createlabel "Platform:" 170 100; $editGameForm.Controls.Add($labelPlatform)
     $textPlatform = CreateTextBox "" 245 100 200 20; $editGameForm.Controls.Add($textPlatform)
@@ -466,7 +466,7 @@ function RenderAddGameForm() {
     $textName = CreateTextBox "" 245 20 300 20;	$addGameForm.Controls.Add($textName)
 
     $labelExe = Createlabel "Exe:" 170 60; $addGameForm.Controls.Add($labelExe)
-    $textExe = CreateTextBox "" 245 60 200 20; $textExe.ReadOnly = $true; $addGameForm.Controls.Add($textExe)
+    $textExe = CreateTextBox "" 245 60 200 20; $addGameForm.Controls.Add($textExe)
 
     $labelPlatform = Createlabel "Platform:" 170 100; $addGameForm.Controls.Add($labelPlatform)
     $textPlatform = CreateTextBox "PC" 245 100 200 20; $textPlatform.ReadOnly = $true; $addGameForm.Controls.Add($textPlatform)
@@ -550,8 +550,16 @@ function RenderAddGameForm() {
                 return
             }
             $gameName = $textName.Text
-            $gameExeFile = Get-Item $textExe.Text
-            $gameExeName = $gameExeFile.BaseName
+            $gameExeName = ""
+
+            if (Test-Path $textExe.Text) {
+                $gameExeFile = Get-Item $textExe.Text
+                $gameExeName = $gameExeFile.BaseName
+            }
+            else {
+                $gameExeName = $textExe.Text -replace '\.exe$',''
+            }
+
             $gameIconPath = $pictureBoxImagePath.Text
             $gameLastPlayDate = (Get-Date ([datetime]::UtcNow) -UFormat "%s").Split('.').Get(0)
 
