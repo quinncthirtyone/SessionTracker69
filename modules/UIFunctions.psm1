@@ -76,7 +76,7 @@ function RenderGameList() {
 
     $workingDirectory = (Get-Location).Path
 
-    $getAllGamesQuery = "SELECT name, icon, platform, play_time, session_count, completed, last_play_date, status FROM games"
+    $getAllGamesQuery = "SELECT name, icon, platform, play_time, COALESCE(session_count, 0) as session_count, completed, last_play_date, status FROM games"
     $gameRecords = RunDBQuery $getAllGamesQuery
     if ($gameRecords.Length -eq 0) {
         if(-Not $InBackground) {
@@ -139,7 +139,7 @@ function RenderGameList() {
             Name          = $name
             Platform      = $gameRecord.platform
             Playtime      = $gameRecord.play_time
-            SessionCount  = $gameRecord.session_count
+            SessionCount  = [string]$gameRecord.session_count
             StatusText    = $statusText
             StatusIcon    = $statusIcon
             LastPlayedOn  = $gameRecord.last_play_date
