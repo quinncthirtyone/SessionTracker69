@@ -143,8 +143,6 @@ try {
     Log "Database setup complete"
 
     # Set active profile to 1 on startup
-    Set-ActiveProfile 1
-    Set-RunningIcon
 
     #------------------------------------------
     # Integrate With HWiNFO
@@ -221,6 +219,10 @@ try {
     $AppNotifyIcon.Text = "Gaming Gaiden"
     $AppNotifyIcon.Icon = $IconRunning
     $AppNotifyIcon.Visible = $true
+
+    # Set active profile to 1 on startup and update icon
+    Set-ActiveProfile 1
+    Set-RunningIcon
 
     $allGamesMenuItem = CreateMenuItem "All Games"
 
