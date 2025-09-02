@@ -562,6 +562,9 @@ function RenderAboutDialog() {
 }
 
 function RenderQuickView() {
+    param(
+        [scriptblock]$IconUpdateCallback
+    )
     $quickViewForm = CreateForm "Quick View" 420 100 ".\icons\running.ico"
     $quickViewForm.MaximizeBox = $false
     $quickViewForm.MinimizeBox = $false
@@ -733,6 +736,9 @@ function RenderQuickView() {
         $activeProfileId = Get-ActiveProfile
         $inactiveProfile = $profiles | Where-Object { $_.id -ne $activeProfileId } | Select-Object -First 1
         Set-ActiveProfile $inactiveProfile.id
+        if ($null -ne $IconUpdateCallback) {
+            & $IconUpdateCallback
+        }
         Load-Data
     })
 
