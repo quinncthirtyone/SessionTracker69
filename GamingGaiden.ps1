@@ -229,8 +229,6 @@ try {
     $exitMenuItem = CreateMenuItem "Exit"
     $StartTrackerMenuItem = CreateMenuItem "Start Tracker"
     $StopTrackerMenuItem = CreateMenuItem "Stop Tracker"
-    $helpMenuItem = CreateMenuItem "Help / FAQs"
-    $aboutMenuItem = CreateMenuItem "About"
 
     $settingsSubMenuItem = CreateMenuItem "Settings"
     $addGameMenuItem = CreateMenuItem "Add Game"
@@ -263,8 +261,35 @@ try {
     $null = $statsSubMenuItem.DropDownItems.Add($sessionHistoryMenuItem)
 
     $appContextMenu = New-Object System.Windows.Forms.ContextMenuStrip
-    $appContextMenu.Items.AddRange(@($allGamesMenuItem, $menuItemSeparator2, $statsSubMenuItem, $menuItemSeparator3, $settingsSubMenuItem, $menuItemSeparator4, $StartTrackerMenuItem, $StopTrackerMenuItem, $menuItemSeparator5, $helpMenuItem, $aboutMenuItem, $menuItemSeparator6, $exitMenuItem))
+    $switchProfileSubMenuItem = CreateMenuItem "Switch Profile"
+    $appContextMenu.Items.AddRange(@($allGamesMenuItem, $menuItemSeparator2, $statsSubMenuItem, $menuItemSeparator3, $settingsSubMenuItem, $menuItemSeparator4, $switchProfileSubMenuItem, $menuItemSeparator5, $StartTrackerMenuItem, $StopTrackerMenuItem, $menuItemSeparator6, $exitMenuItem))
     $AppNotifyIcon.ContextMenuStrip = $appContextMenu
+
+    $profileClickHandler = {
+        param($sender, $e)
+        $profileId = $sender.Tag
+        Set-ActiveProfile $profileId
+        Set-RunningIcon
+        $AppNotifyIcon.ShowBalloonTip(3000, "Profile Switched", "Switched to $($sender.Text).", [System.Windows.Forms.ToolTipIcon]::Info)
+    }
+
+    $appContextMenu.Add_Opening({
+            $switchProfileSubMenuItem.DropDownItems.Clear()
+            $profiles = Get-Profiles
+            $activeProfileId = Get-ActiveProfile
+
+            foreach ($profile in $profiles) {
+                $profileMenuItem = CreateMenuItem $profile.name
+                $profileMenuItem.Tag = $profile.id
+
+                if ($profile.id -eq $activeProfileId) {
+                    $profileMenuItem.Checked = $true
+                    $profileMenuItem.Enabled = $false
+                }
+                $profileMenuItem.Add_Click($profileClickHandler)
+                $switchProfileSubMenuItem.DropDownItems.Add($profileMenuItem) | Out-Null
+            }
+        })
 
     #------------------------------------------
     # Setup Tray Icon Actions
@@ -296,15 +321,6 @@ try {
     $StopTrackerMenuItem.Add_Click({
             StopTrackerJob
             $AppNotifyIcon.ShowBalloonTip(3000, "Tracker Stopped", "Game launch detection disabled.", [System.Windows.Forms.ToolTipIcon]::Info)
-        })
-
-    $helpMenuItem.Add_Click({
-            Log "Showing help"
-            Invoke-Item ".\ui\Manual.html"
-        })
-
-    $aboutMenuItem.Add_Click({
-            RenderAboutDialog
         })
 
     $exitMenuItem.Add_Click({
