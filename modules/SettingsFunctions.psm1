@@ -219,6 +219,7 @@ function RenderEditGameForm($GamesList) {
     $editGameForm.Controls.Add($buttonUpdateExe)
 
     $buttonRemove = CreateButton "Delete" 470 20
+	$buttonRemove.BackColor = [System.Drawing.Color]::Red
     $buttonRemove.Add_Click({
             $gameName = $textName.Text
 
