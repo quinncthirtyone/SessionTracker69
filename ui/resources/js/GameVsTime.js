@@ -15,7 +15,11 @@ function updateChart(gameCount, labelText) {
   for (const game of gamingData) {
     if (i == gameCount) break;
     labels.push(game.name);
-    data.push({ game: game.name, time: game.time });
+    data.push({
+      game: game.name,
+      time: game.time,
+      color_hex: game.color_hex,
+    });
     i++;
   }
 
@@ -34,7 +38,7 @@ function updateChart(gameCount, labelText) {
         {
           label: labelText,
           data: data.map((row) => row.time),
-          backgroundColor: '#ff6384', // Use a single, consistent color
+          backgroundColor: data.map((row) => row.color_hex),
           borderWidth: 1,
         },
       ],
