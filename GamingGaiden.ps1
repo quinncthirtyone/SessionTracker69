@@ -23,89 +23,6 @@ try {
     Import-Module ".\modules\UIFunctions.psm1" | Out-Null
 
     #------------------------------------------
-    # Exit if Gaming Gaiden is being started from non standard location
-    $currentDirectory = (Get-Location).path
-    if ($currentDirectory -ne "C:\ProgramData\GamingGaiden") {
-        ShowMessage "Launched from non standard location. Please install and use the created shortcuts to start app." "Ok" "Error"
-        exit 1;
-    }
-
-    #------------------------------------------
-    # Exit if Gaming Gaiden is already Running
-    $results = [System.Diagnostics.Process]::GetProcessesByName("GamingGaiden")
-    if ($results.Length -gt 1) {
-        ShowMessage "Gaming Gaiden is already running. Check system tray.`r`nNot Starting another Instance." "Ok" "Error"
-        Log "Error: Gaming Gaiden already running. Not Starting another Instance."
-        exit 1;
-    }
-
-    #------------------------------------------
-    # Clear log at application boot if log size has grown above 5 MB
-    if ((Test-Path .\GamingGaiden.log) -And ((Get-Item .\GamingGaiden.log).Length / 1MB -gt 5)) {
-        Remove-Item ".\GamingGaiden.log" -ErrorAction silentlycontinue
-        $timestamp = Get-date -f s
-        Log "Log grew more than 5 MB. Clearing."
-    }
-
-    #------------------------------------------
-    # Setup Database
-    Log "Executing database setup"
-    SetupDatabase
-    Log "Database setup complete"
-
-    # Set active profile to 1 on startup
-    Set-ActiveProfile 1
-
-    #------------------------------------------
-    # Integrate With HWiNFO
-    $HWInfoSensorTracking = 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden\Other0'
-    $HWInfoSensorSession = 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden\Other1'
-
-    if ((Test-Path "HKCU:\SOFTWARE\HWiNFO64") -And -Not (Test-Path "HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden")) {
-        Log "Integrating with HWiNFO"
-        New-Item -path 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden' -Name 'Other0' -Force | Out-Null
-        New-Item -path 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden' -Name 'Other1' -Force | Out-Null
-        Set-Itemproperty -path $HWInfoSensorTracking -Name 'Name' -value 'Tracking' | Out-Null
-        Set-Itemproperty -path $HWInfoSensorTracking -Name 'Unit' -value 'Yes/No' | Out-Null
-        Set-Itemproperty -path $HWInfoSensorTracking -Name 'Value' -value 0 | Out-Null
-        Set-Itemproperty -path $HWInfoSensorSession -Name 'Name' -value 'Session Length' | Out-Null
-        Set-Itemproperty -path $HWInfoSensorSession -Name 'Unit' -value 'Min' | Out-Null
-        Set-Itemproperty -path $HWInfoSensorSession -Name 'Value' -value 0 | Out-Null
-    }
-    else {
-        Log "HWiNFO not detected. Or Gaming Gaiden is already Integrated. Skipping Auto Integration"
-    }
-
-    #------------------------------------------
-    # Tracker Job Scripts
-    $TrackerJobInitializationScript = {
-        Import-Module ".\modules\PSSQLite";
-        Import-Module ".\modules\HelperFunctions.psm1";
-        Import-Module ".\modules\UIFunctions.psm1";
-        Import-Module ".\modules\ProcessFunctions.psm1";
-        Import-Module ".\modules\QueryFunctions.psm1";
-        Import-Module ".\modules\StorageFunctions.psm1";
-        Import-Module ".\modules\UserInput.psm1";
-    }
-
-    $TrackerJobScript = {
-        try {
-            while ($true) {
-                $detectedExe = DetectGame
-                MonitorGame $detectedExe
-                UpdateAllStatsInBackground
-            }
-        }
-        catch {
-            $timestamp = (Get-date -f %d-%M-%y`|%H:%m:%s)
-            Write-Output "$timestamp : Error: A user or system error has caused an exception. Check log for details." >> ".\GamingGaiden.log"
-            Write-Output "$timestamp : Exception: $($_.Exception.Message)" >> ".\GamingGaiden.log"
-            Write-Output "$timestamp : Error: Tracker job has failed. Please restart from app menu to continue detection." >> ".\GamingGaiden.log"
-            exit 1;
-        }
-    }
-
-    #------------------------------------------
     # Functions
     function ResetIconAndSensors() {
         Log "Resetting Icon and Sensors"
@@ -113,6 +30,21 @@ try {
     Set-Itemproperty -path $HWInfoSensorTracking -Name 'Value' -value 0 | Out-Null
     Set-Itemproperty -path $HWInfoSensorSession -Name 'Value' -value 0 | Out-Null
         $AppNotifyIcon.Text = "Gaming Gaiden"
+    }
+
+    function global:Set-RunningIcon() {
+        $profileId = Get-ActiveProfile
+        if ($profileId -eq 1) {
+            $script:IconRunning = [System.Drawing.Icon]::new(".\icons\Pro_1.ico")
+        }
+        else {
+            $script:IconRunning = [System.Drawing.Icon]::new(".\icons\Pro_2.ico")
+        }
+
+        # If current icon is not tracking or stopped, it must be a running icon.
+        if ($script:AppNotifyIcon.Icon.Handle -ne $script:IconTracking.Handle -and $script:AppNotifyIcon.Icon.Handle -ne $script:IconStopped.Handle) {
+            $script:AppNotifyIcon.Icon = $script:IconRunning
+        }
     }
 
     function  StartTrackerJob() {
@@ -180,6 +112,88 @@ try {
     }
 
     #------------------------------------------
+    # Exit if Gaming Gaiden is being started from non standard location
+    $currentDirectory = (Get-Location).path
+    if ($currentDirectory -ne "C:\ProgramData\GamingGaiden") {
+        ShowMessage "Launched from non standard location. Please install and use the created shortcuts to start app." "Ok" "Error"
+        exit 1;
+    }
+
+    #------------------------------------------
+    # Exit if Gaming Gaiden is already Running
+    $results = [System.Diagnostics.Process]::GetProcessesByName("GamingGaiden")
+    if ($results.Length -gt 1) {
+        ShowMessage "Gaming Gaiden is already running. Check system tray.`r`nNot Starting another Instance." "Ok" "Error"
+        Log "Error: Gaming Gaiden already running. Not Starting another Instance."
+        exit 1;
+    }
+
+    #------------------------------------------
+    # Clear log at application boot if log size has grown above 5 MB
+    if ((Test-Path .\GamingGaiden.log) -And ((Get-Item .\GamingGaiden.log).Length / 1MB -gt 5)) {
+        Remove-Item ".\GamingGaiden.log" -ErrorAction silentlycontinue
+        $timestamp = Get-date -f s
+        Log "Log grew more than 5 MB. Clearing."
+    }
+
+    #------------------------------------------
+    # Setup Database
+    Log "Executing database setup"
+    SetupDatabase
+    Log "Database setup complete"
+
+    # Set active profile to 1 on startup
+
+    #------------------------------------------
+    # Integrate With HWiNFO
+    $HWInfoSensorTracking = 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden\Other0'
+    $HWInfoSensorSession = 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden\Other1'
+
+    if ((Test-Path "HKCU:\SOFTWARE\HWiNFO64") -And -Not (Test-Path "HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden")) {
+        Log "Integrating with HWiNFO"
+        New-Item -path 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden' -Name 'Other0' -Force | Out-Null
+        New-Item -path 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden' -Name 'Other1' -Force | Out-Null
+        Set-Itemproperty -path $HWInfoSensorTracking -Name 'Name' -value 'Tracking' | Out-Null
+        Set-Itemproperty -path $HWInfoSensorTracking -Name 'Unit' -value 'Yes/No' | Out-Null
+        Set-Itemproperty -path $HWInfoSensorTracking -Name 'Value' -value 0 | Out-Null
+        Set-Itemproperty -path $HWInfoSensorSession -Name 'Name' -value 'Session Length' | Out-Null
+        Set-Itemproperty -path $HWInfoSensorSession -Name 'Unit' -value 'Min' | Out-Null
+        Set-Itemproperty -path $HWInfoSensorSession -Name 'Value' -value 0 | Out-Null
+    }
+    else {
+        Log "HWiNFO not detected. Or Gaming Gaiden is already Integrated. Skipping Auto Integration"
+    }
+
+    #------------------------------------------
+    # Tracker Job Scripts
+    $TrackerJobInitializationScript = {
+        Import-Module ".\modules\PSSQLite";
+        Import-Module ".\modules\HelperFunctions.psm1";
+        Import-Module ".\modules\UIFunctions.psm1";
+        Import-Module ".\modules\ProcessFunctions.psm1";
+        Import-Module ".\modules\QueryFunctions.psm1";
+        Import-Module ".\modules\StorageFunctions.psm1";
+        Import-Module ".\modules\UserInput.psm1";
+    }
+
+    $TrackerJobScript = {
+        try {
+            while ($true) {
+                $detectedExe = DetectGame
+                MonitorGame $detectedExe
+                UpdateAllStatsInBackground
+            }
+        }
+        catch {
+            $timestamp = (Get-date -f %d-%M-%y`|%H:%m:%s)
+            Write-Output "$timestamp : Error: A user or system error has caused an exception. Check log for details." >> ".\GamingGaiden.log"
+            Write-Output "$timestamp : Exception: $($_.Exception.Message)" >> ".\GamingGaiden.log"
+            Write-Output "$timestamp : Error: Tracker job has failed. Please restart from app menu to continue detection." >> ".\GamingGaiden.log"
+            exit 1;
+        }
+    }
+
+    #------------------------------------------
     # Setup Timer To Monitor Tracking Updates from Tracker Job
     $Timer = New-Object Windows.Forms.Timer
     $Timer.Interval = 1000
@@ -205,6 +219,10 @@ try {
     $AppNotifyIcon.Text = "Gaming Gaiden"
     $AppNotifyIcon.Icon = $IconRunning
     $AppNotifyIcon.Visible = $true
+
+    # Set active profile to 1 on startup and update icon
+    Set-ActiveProfile 1
+    Set-RunningIcon
 
     $allGamesMenuItem = CreateMenuItem "All Games"
 
@@ -254,7 +272,7 @@ try {
     # Setup Tray Icon Actions
     $AppNotifyIcon.Add_Click({
             if ($_.Button -eq [Windows.Forms.MouseButtons]::Left) {
-                RenderQuickView
+                RenderQuickView -IconUpdateCallback { Set-RunningIcon }
             }
 
             if ($_.Button -eq [Windows.Forms.MouseButtons]::Right) {
