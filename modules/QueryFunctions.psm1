@@ -180,7 +180,7 @@ function GetGameDetails($Game) {
 
     $profileId = Get-ActiveProfile
     $pattern = SQLEscapedMatchPattern $Game.Trim()
-    $getGameDetailsQuery = "SELECT g.*, gs.play_time, gs.last_play_date, gs.completed, gs.status, gs.session_count, gs.idle_time, gs.disable_idle_detection FROM games g LEFT JOIN game_stats gs ON g.id = gs.game_id AND gs.profile_id = {0} WHERE g.name LIKE '{1}'" -f $profileId, $pattern
+    $getGameDetailsQuery = "SELECT g.*, p_gs.completed, p_gs.status, p_gs.session_count, p_gs.last_play_date, (SELECT SUM(play_time) FROM game_stats WHERE game_id = g.id) as play_time, (SELECT SUM(idle_time) FROM game_stats WHERE game_id = g.id) as idle_time FROM games g LEFT JOIN game_stats p_gs ON g.id = p_gs.game_id AND p_gs.profile_id = {0} WHERE g.name LIKE '{1}'" -f $profileId, $pattern
 
     $gameDetails = RunDBQuery $getGameDetailsQuery
 
