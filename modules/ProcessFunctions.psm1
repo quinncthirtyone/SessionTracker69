@@ -2,10 +2,14 @@
     Log "Starting game detection"
 
     # Fetch games in order of most recent to least recent
-    $getGameExesQuery = "SELECT exe_name FROM games ORDER BY last_play_date DESC"
+    $profileId = Get-ActiveProfile
+    $getProfileGamesQuery = "SELECT g.exe_name FROM games g JOIN game_stats gs ON g.id = gs.game_id WHERE gs.profile_id = $profileId ORDER BY gs.last_play_date DESC"
+    $getOtherGamesQuery = "SELECT exe_name FROM games WHERE id NOT IN (SELECT game_id FROM game_stats WHERE profile_id = $profileId)"
     $getEmulatorExesQuery = "SELECT exe_name FROM emulated_platforms"
 
-    $gameExeList = @((RunDBQuery $getGameExesQuery).exe_name)
+    $profileGameExeList = @((RunDBQuery $getProfileGamesQuery).exe_name)
+    $otherGameExeList = @((RunDBQuery $getOtherGamesQuery).exe_name)
+    $gameExeList = $profileGameExeList + $otherGameExeList
     $rawEmulatorExes = @((RunDBQuery $getEmulatorExesQuery).exe_name)
 
     # Flatten the returned result rows containing multiple emulator exes into list with one exe per item

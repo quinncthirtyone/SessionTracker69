@@ -1,4 +1,19 @@
-﻿function IsExeEmulator($DetectedExe) {
+﻿function Get-ActiveProfile {
+    Log "Getting active profile"
+    $getActiveProfileQuery = "SELECT id FROM profiles WHERE is_active = 1"
+    $activeProfile = (RunDBQuery $getActiveProfileQuery).id
+    Log "Active profile: $activeProfile"
+    return $activeProfile
+}
+
+function Get-Profiles {
+    Log "Getting all profiles"
+    $getProfilesQuery = "SELECT * FROM profiles ORDER BY id"
+    $profiles = RunDBQuery $getProfilesQuery
+    return $profiles
+}
+
+function IsExeEmulator($DetectedExe) {
     Log "Is $DetectedExe an Emulator?"
 
     $pattern = SQLEscapedMatchPattern $DetectedExe.Trim()
@@ -38,8 +53,9 @@ function CheckExeCoreCombo($ExeList, $Core) {
 function GetPlayTime($GameName) {
     Log "Get existing gameplay time for $GameName"
 
+    $profileId = Get-ActiveProfile
     $gameNamePattern = SQLEscapedMatchPattern($GameName.Trim())
-    $getGamePlayTimeQuery = "SELECT play_time FROM games WHERE name LIKE '{0}'" -f $gameNamePattern
+    $getGamePlayTimeQuery = "SELECT gs.play_time FROM game_stats gs JOIN games g ON gs.game_id = g.id WHERE g.name LIKE '{0}' AND gs.profile_id = {1}" -f $gameNamePattern, $profileId
 
     $recordedGamePlayTime = (RunDBQuery $getGamePlayTimeQuery).play_time
 
@@ -50,8 +66,9 @@ function GetPlayTime($GameName) {
 function GetIdleTime($GameName) {
     Log "Get existing game idle time for $GameName"
 
+    $profileId = Get-ActiveProfile
     $gameNamePattern = SQLEscapedMatchPattern($GameName.Trim())
-    $getGameIdleTimeQuery = "SELECT idle_time FROM games WHERE name LIKE '{0}'" -f $gameNamePattern
+    $getGameIdleTimeQuery = "SELECT gs.idle_time FROM game_stats gs JOIN games g ON gs.game_id = g.id WHERE g.name LIKE '{0}' AND gs.profile_id = {1}" -f $gameNamePattern, $profileId
 
     $recordedGameIdleTime = (RunDBQuery $getGameIdleTimeQuery).idle_time
 
@@ -161,8 +178,9 @@ function findEmulatedGameDetails($DetectedEmulatorExe) {
 function GetGameDetails($Game) {
     Log "Finding Details of $Game"
 
+    $profileId = Get-ActiveProfile
     $pattern = SQLEscapedMatchPattern $Game.Trim()
-    $getGameDetailsQuery = "SELECT * FROM games WHERE name LIKE '{0}'" -f $pattern
+    $getGameDetailsQuery = "SELECT g.*, gs.play_time, gs.last_play_date, gs.completed, gs.status, gs.session_count, gs.idle_time, gs.disable_idle_detection FROM games g LEFT JOIN game_stats gs ON g.id = gs.game_id AND gs.profile_id = {0} WHERE g.name LIKE '{1}'" -f $profileId, $pattern
 
     $gameDetails = RunDBQuery $getGameDetailsQuery
 

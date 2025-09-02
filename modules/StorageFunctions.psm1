@@ -1,69 +1,52 @@
-﻿function SaveGame() {
+﻿function Set-ActiveProfile($ProfileId) {
+    Log "Setting active profile to $ProfileId"
+    $updateProfileQuery = "UPDATE profiles SET is_active = CASE WHEN id = @ProfileId THEN 1 ELSE 0 END"
+    RunDBQuery $updateProfileQuery @{ ProfileId = $ProfileId }
+}
+
+function Update-ProfileName($ProfileId, $ProfileName) {
+    Log "Updating profile $ProfileId name to $ProfileName"
+    $updateProfileNameQuery = "UPDATE profiles SET name = @ProfileName WHERE id = @ProfileId"
+    RunDBQuery $updateProfileNameQuery @{ ProfileId = $ProfileId; ProfileName = $ProfileName }
+}
+
+function SaveGame() {
     param(
         [string]$GameName,
         [string]$GameExeName,
         [string]$GameIconPath,
-        [string]$GamePlayTime,
-        [string]$GameIdleTime,
-        [string]$GameLastPlayDate,
-        [string]$GameCompleteStatus,
         [string]$GamePlatform,
-        [string]$GameSessionCount,
-        [string]$GameStatus = "",
-        [string]$GameRomBasedName = "",
-        [bool]$GameDisableIdleDetection = $false
+        [string]$GameRomBasedName = ""
     )
 
+    $profileId = Get-ActiveProfile
     $gameIconBytes = (Get-Content -Path $GameIconPath -Encoding byte -Raw);
     $gameIconColor = Get-DominantColor $gameIconBytes
 
-    $addGameQuery = "INSERT INTO games (name, exe_name, icon, play_time, idle_time, last_play_date, completed, platform, session_count, status, rom_based_name, color_hex, disable_idle_detection)" +
-    "VALUES (@GameName, @GameExeName, @gameIconBytes, @GamePlayTime, @GameIdleTime, @GameLastPlayDate, @GameCompleteStatus, @GamePlatform, @GameSessionCount, @GameStatus, @GameRomBasedName, @GameIconColor, @GameDisableIdleDetection)"
-
-    $gameNamePattern = SQLEscapedMatchPattern($GameName.Trim())
-    $setGameStatusNull = "UPDATE games SET status = @GameStatus WHERE name LIKE '{0}'" -f $gameNamePattern
-    $setRomBasedNameNull = "UPDATE games SET rom_based_name = @GameRomBasedName WHERE name LIKE '{0}'" -f $gameNamePattern
-
-    Log "Adding $GameName in Database"
-
-    RunDBQuery $addGameQuery @{
-        GameName                 = $GameName.Trim()
-        GameExeName              = $GameExeName.Trim()
-        gameIconBytes            = $gameIconBytes
-        GamePlayTime             = $GamePlayTime
-        GameIdleTime             = $GameIdleTime
-        GameLastPlayDate         = $GameLastPlayDate
-        GameCompleteStatus       = $GameCompleteStatus
-        GamePlatform             = $GamePlatform.Trim()
-        GameSessionCount         = $GameSessionCount
-        GameStatus               = $GameStatus
-        GameRomBasedName         = $GameRomBasedName.Trim()
-        GameIconColor            = $gameIconColor
-        GameDisableIdleDetection = $GameDisableIdleDetection
-    }
-
-    # Have to set Null Values after the Save for clean code, bcause the following doesn't work
-    #
-    #    $var = $GameRomBasedName.Trim()
-    #    if ($GameRomBasedName -eq "") {
-    #       $var = [System.DBNull]::Value
-    #    }
-    #    RunDBQuery $addGameQuery @{ ..., GameRomBasedName = $var }
-    #
-    # On using the above code, [System.DBNull]::Value gets casted to string for some reason and gets inserted in DB as blank string instead of a true NULL.
-    
-    if ($GameRomBasedName -eq "") {
-        RunDBQuery $setRomBasedNameNull @{
-            GameRomBasedName = [System.DBNull]::Value
+    # Add game to shared games table if not exists
+    $gameExists = DoesEntityExists "games" "name" $GameName
+    if ($null -eq $gameExists) {
+        $addGameQuery = "INSERT INTO games (name, exe_name, platform, icon, color_hex, rom_based_name) VALUES (@GameName, @GameExeName, @GamePlatform, @gameIconBytes, @GameIconColor, @GameRomBasedName)"
+        RunDBQuery $addGameQuery @{
+            GameName         = $GameName.Trim()
+            GameExeName      = $GameExeName.Trim()
+            GamePlatform     = $GamePlatform.Trim()
+            gameIconBytes    = $gameIconBytes
+            GameIconColor    = $gameIconColor
+            GameRomBasedName = $GameRomBasedName.Trim()
         }
     }
 
-    if ($GameStatus -eq "") {
-        RunDBQuery $setGameStatusNull @{
-            GameStatus = [System.DBNull]::Value
+    # Add game stats for the current profile if not exists
+    $gameId = (RunDBQuery "SELECT id FROM games WHERE name LIKE '$GameName'").id
+    $gameStatsExist = RunDBQuery "SELECT id FROM game_stats WHERE game_id = $gameId AND profile_id = $profileId"
+    if ($null -eq $gameStatsExist) {
+        $addGameStatsQuery = "INSERT INTO game_stats (game_id, profile_id, play_time, last_play_date, completed, session_count, idle_time, disable_idle_detection) VALUES (@GameId, @ProfileId, 0, 0, 'FALSE', 0, 0, 0)"
+        RunDBQuery $addGameStatsQuery @{
+            GameId    = $gameId
+            ProfileId = $profileId
         }
     }
-
 }
 
 function SavePlatform() {
@@ -122,17 +105,18 @@ function UpdateGameOnSession() {
         [string]$GameLastPlayDate
     )
 
-    $gameNamePattern = SQLEscapedMatchPattern($GameName.Trim())
+    $profileId = Get-ActiveProfile
+    $gameId = (RunDBQuery "SELECT id FROM games WHERE name LIKE '$GameName'").id
 
-    $getSessionCountQuery = "SELECT session_count FROM games WHERE name LIKE '{0}'" -f $gameNamePattern
+    $getSessionCountQuery = "SELECT session_count FROM game_stats WHERE game_id = $gameId AND profile_id = $profileId"
     $currentSessionCount = (RunDBQuery $getSessionCountQuery).session_count
 
     $newSessionCount = $currentSessionCount + 1
 
-    $updateGamePlayTimeQuery = "UPDATE games SET play_time = @UpdatedPlayTime, idle_time = @UpdatedIdleTime, last_play_date = @UpdatedLastPlayDate, session_count = @newSessionCount WHERE name LIKE '{0}'" -f $gameNamePattern
+    $updateGamePlayTimeQuery = "UPDATE game_stats SET play_time = @UpdatedPlayTime, idle_time = @UpdatedIdleTime, last_play_date = @UpdatedLastPlayDate, session_count = @newSessionCount WHERE game_id = $gameId AND profile_id = $profileId"
 
-    Log "Updating $GameName play time to $GamePlayTime min and idle time to $GameIdleTime min in database"
-    Log "Updating session count from $currentSessionCount to $newSessionCount in database"
+    Log "Updating $GameName play time to $GamePlayTime min and idle time to $GameIdleTime min in database for profile $profileId"
+    Log "Updating session count from $currentSessionCount to $newSessionCount in database for profile $profileId"
 
     RunDBQuery $updateGamePlayTimeQuery @{
         UpdatedPlayTime     = $GamePlayTime
@@ -155,51 +139,28 @@ function UpdateGameOnEdit() {
         [bool]$GameDisableIdleDetection
     )
 
+    $profileId = Get-ActiveProfile
+    $gameId = (RunDBQuery "SELECT id FROM games WHERE name LIKE '$OriginalGameName'").id
+
+    # Update shared game data
     $gameIconBytes = (Get-Content -Path $GameIconPath -Encoding byte -Raw);
     $gameIconColor = Get-DominantColor $gameIconBytes
-
-    $gameNamePattern = SQLEscapedMatchPattern($OriginalGameName.Trim())
-
-    if ( $OriginalGameName -eq $GameName) {
-        $updateGameQuery = "UPDATE games SET exe_name = @GameExeName, icon = @gameIconBytes, play_time = @GamePlayTime, completed = @GameCompleteStatus, platform = @GamePlatform, status = @GameStatus, color_hex = @GameIconColor, disable_idle_detection = @GameDisableIdleDetection WHERE name LIKE '{0}'" -f $gameNamePattern
-
-        Log "Editing $GameName in database"
-        RunDBQuery $updateGameQuery @{
-            GameExeName              = $GameExeName.Trim()
-            gameIconBytes            = $gameIconBytes
-            GamePlayTime             = $GamePlayTime
-            GameCompleteStatus       = $GameCompleteStatus
-            GamePlatform             = $GamePlatform.Trim()
-            GameStatus               = $GameStatus
-            GameIconColor            = $gameIconColor
-            GameDisableIdleDetection = $GameDisableIdleDetection
-        }
+    $updateGameQuery = "UPDATE games SET name = @GameName, exe_name = @GameExeName, platform = @GamePlatform, icon = @gameIconBytes, color_hex = @GameIconColor WHERE id = $gameId"
+    RunDBQuery $updateGameQuery @{
+        GameName     = $GameName.Trim()
+        GameExeName  = $GameExeName.Trim()
+        GamePlatform = $GamePlatform.Trim()
+        gameIconBytes = $gameIconBytes
+        GameIconColor = $gameIconColor
     }
-    else {
-        Log "User changed game's name from $OriginalGameName to $GameName. Need to delete the game and add it again"
 
-        $getSessionCountQuery = "SELECT session_count FROM games WHERE name LIKE '{0}'" -f $gameNamePattern
-        $gameSessionCount = (RunDBQuery $getSessionCountQuery).session_count
-
-        $getIdleTimeQuery = "SELECT idle_time FROM games WHERE name LIKE '{0}'" -f $gameNamePattern
-        $gameIdleTime = (RunDBQuery $getIdleTimeQuery).idle_time
-
-        $getLastPlayDateQuery = "SELECT last_play_date FROM games WHERE name LIKE '{0}'" -f $gameNamePattern
-        $gameLastPlayDate = (RunDBQuery $getLastPlayDateQuery).last_play_date
-
-        if (IsExeEmulator $GameExeName) {
-            $getRomBasedNameQuery = "SELECT rom_based_name FROM games WHERE name LIKE '{0}'" -f $gameNamePattern
-            $romBasedName = (RunDBQuery $getRomBasedNameQuery).rom_based_name
-
-            SaveGame -GameName $GameName -GameExeName $GameExeName -GameIconPath $GameIconPath `
-                -GamePlayTime $GamePlayTime -GameIdleTime $gameIdleTime -GameLastPlayDate $gameLastPlayDate -GameCompleteStatus $GameCompleteStatus -GamePlatform $GamePlatform -GameSessionCount $gameSessionCount -GameStatus $GameStatus -GameRomBasedName $romBasedName -GameDisableIdleDetection $GameDisableIdleDetection
-        }
-        else {
-            SaveGame -GameName $GameName -GameExeName $GameExeName -GameIconPath $GameIconPath `
-                -GamePlayTime $GamePlayTime -GameIdleTime $gameIdleTime -GameLastPlayDate $gameLastPlayDate -GameCompleteStatus $GameCompleteStatus -GamePlatform $GamePlatform -GameSessionCount $gameSessionCount -GameStatus $GameStatus -GameDisableIdleDetection $GameDisableIdleDetection
-        }
-
-        RemoveGame($OriginalGameName)
+    # Update profile-specific game stats
+    $updateGameStatsQuery = "UPDATE game_stats SET play_time = @GamePlayTime, completed = @GameCompleteStatus, status = @GameStatus, disable_idle_detection = @GameDisableIdleDetection WHERE game_id = $gameId AND profile_id = $profileId"
+    RunDBQuery $updateGameStatsQuery @{
+        GamePlayTime             = $GamePlayTime
+        GameCompleteStatus       = $GameCompleteStatus
+        GameStatus               = $GameStatus
+        GameDisableIdleDetection = $GameDisableIdleDetection
     }
 }
 
@@ -283,11 +244,10 @@ function  UpdatePlatformOnEdit() {
 }
 
 function RemoveGame($GameName) {
-    $gameNamePattern = SQLEscapedMatchPattern($GameName.Trim())
-    $removeGameQuery = "DELETE FROM games WHERE name LIKE '{0}'" -f $gameNamePattern
-
     Log "Removing $GameName from database"
-    RunDBQuery $removeGameQuery
+    $gameId = (RunDBQuery "SELECT id FROM games WHERE name LIKE '$GameName'").id
+    RunDBQuery "DELETE FROM game_stats WHERE game_id = $gameId"
+    RunDBQuery "DELETE FROM games WHERE id = $gameId"
 }
 
 function RemovePC($PCName) {
@@ -307,21 +267,22 @@ function RemovePlatform($PlatformName) {
 }
 
 function RecordPlaytimOnDate($PlayTime) {
-    $existingPlayTimeQuery = "SELECT play_time FROM daily_playtime WHERE play_date like DATE('now')"
+    $profileId = Get-ActiveProfile
+    $existingPlayTimeQuery = "SELECT play_time FROM daily_playtime WHERE play_date like DATE('now') AND profile_id = {0}" -f $profileId
 
     $existingPlayTime = (RunDBQuery $existingPlayTimeQuery).play_time
 
     $recordPlayTimeQuery = ""
     if ($null -eq $existingPlayTime) {
-        $recordPlayTimeQuery = "INSERT INTO daily_playtime(play_date, play_time) VALUES (DATE('now'), {0})" -f $PlayTime
+        $recordPlayTimeQuery = "INSERT INTO daily_playtime(play_date, play_time, profile_id) VALUES (DATE('now'), {0}, {1})" -f $PlayTime, $profileId
     }
     else {
         $updatedPlayTime = $PlayTime + $existingPlayTime
 
-        $recordPlayTimeQuery = "UPDATE daily_playtime SET play_time = {0} WHERE play_date like DATE('now')" -f $updatedPlayTime
+        $recordPlayTimeQuery = "UPDATE daily_playtime SET play_time = {0} WHERE play_date like DATE('now') AND profile_id = {1}" -f $updatedPlayTime, $profileId
     }
 
-    Log "Updating playTime for today in database"
+    Log "Updating playTime for today in database for profile $profileId"
     RunDBQuery $recordPlayTimeQuery
 }
 
@@ -332,15 +293,16 @@ function RecordSessionHistory() {
         [int]$SessionDuration
     )
 
-    $gameNamePattern = SQLEscapedMatchPattern($GameName.Trim())
+    $profileId = Get-ActiveProfile
     $sessionStartTimeUnix = (Get-Date $SessionStartTime -UFormat %s).Split('.')[0]
 
-    $insertSessionQuery = "INSERT INTO session_history (game_name, session_start_time, session_duration_minutes) VALUES (@GameName, @SessionStartTime, @SessionDuration)"
+    $insertSessionQuery = "INSERT INTO session_history (game_name, session_start_time, session_duration_minutes, profile_id) VALUES (@GameName, @SessionStartTime, @SessionDuration, @ProfileId)"
 
-    Log "Recording session history for $GameName"
+    Log "Recording session history for $GameName for profile $profileId"
     RunDBQuery $insertSessionQuery @{
         GameName         = $GameName
         SessionStartTime = $sessionStartTimeUnix
         SessionDuration  = $SessionDuration
+        ProfileId        = $profileId
     }
 }
