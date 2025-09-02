@@ -1,4 +1,5 @@
-﻿#Requires -Version 5.1
+﻿
+#Requires -Version 5.1
 
 #_pragma iconFile '.\build\GamingGaiden\icons\running.ico'
 #_pragma title 'Gaming Gaiden: Gameplay Time Tracker'
@@ -51,6 +52,9 @@ try {
     Log "Executing database setup"
     SetupDatabase
     Log "Database setup complete"
+
+    # Set active profile to 1 on startup
+    Set-ActiveProfile 1
 
     #------------------------------------------
     # Integrate With HWiNFO
@@ -216,6 +220,7 @@ try {
     $editGameMenuItem = CreateMenuItem "Edit Game"
     $editPlatformMenuItem = CreateMenuItem "Edit Emulator"
     $gamingPCMenuItem = CreateMenuItem "Gaming PCs"
+    $nameProfilesMenuItem = CreateMenuItem "Name Profiles"
     $openInstallDirectoryMenuItem = CreateMenuItem "Open Install Directory"
     $null = $settingsSubMenuItem.DropDownItems.Add($addGameMenuItem)
     $null = $settingsSubMenuItem.DropDownItems.Add($editGameMenuItem)
@@ -224,6 +229,7 @@ try {
     $null = $settingsSubMenuItem.DropDownItems.Add($editPlatformMenuItem)
     $null = $settingsSubMenuItem.DropDownItems.Add($menuItemSeparator7)
     $null = $settingsSubMenuItem.DropDownItems.Add($gamingPCMenuItem)
+    $null = $settingsSubMenuItem.DropDownItems.Add($nameProfilesMenuItem)
     $null = $settingsSubMenuItem.DropDownItems.Add($openInstallDirectoryMenuItem)
 
     $statsSubMenuItem = CreateMenuItem "Statistics"
@@ -259,9 +265,10 @@ try {
     #------------------------------------------
     # Setup Tray Icon Context Menu Actions
     $allGamesMenuItem.Add_Click({
+            $profileId = Get-ActiveProfile
             $gamesCheckResult = RenderGameList
             if ($gamesCheckResult -ne $false) {
-                Invoke-Item ".\ui\AllGames.html"
+                Invoke-Item ".\ui\AllGames_$profileId.html"
             }
         })
 
@@ -295,44 +302,50 @@ try {
     #------------------------------------------
     # Statistics Sub Menu Actions
     $summaryItem.Add_Click({
+            $profileId = Get-ActiveProfile
             $sessionVsPlaytimeCheckResult = RenderSummary
             if ($sessionVsPlaytimeCheckResult -ne $false) {
-                Invoke-Item ".\ui\Summary.html"
+                Invoke-Item ".\ui\Summary_$profileId.html"
             }
         })
 
     $gamingTimeMenuItem.Add_Click({
+            $profileId = Get-ActiveProfile
             $gameTimeCheckResult = RenderGamingTime
             if ($gameTimeCheckResult -ne $false) {
-                Invoke-Item ".\ui\GamingTime.html"
+                Invoke-Item ".\ui\GamingTime_$profileId.html"
             }
         })
 
     $gamesPerPlatformMenuItem.Add_Click({
+            $profileId = Get-ActiveProfile
             $gamesPerPlatformCheckResult = RenderGamesPerPlatform
             if ($gamesPerPlatformCheckResult -ne $false) {
-                Invoke-Item ".\ui\GamesPerPlatform.html"
+                Invoke-Item ".\ui\GamesPerPlatform_$profileId.html"
             }
         })
 
     $mostPlayedMenuItem.Add_Click({
+            $profileId = Get-ActiveProfile
             $mostPlayedCheckResult = RenderMostPlayed
             if ($mostPlayedCheckResult -ne $false) {
-                Invoke-Item ".\ui\MostPlayed.html"
+                Invoke-Item ".\ui\MostPlayed_$profileId.html"
             }
         })
 
     $idleTimeMenuItem.Add_Click({
+            $profileId = Get-ActiveProfile
             $idleTimeCheckResult = RenderIdleTime
             if ($idleTimeCheckResult -ne $false) {
-                Invoke-Item ".\ui\IdleTime.html"
+                Invoke-Item ".\ui\IdleTime_$profileId.html"
             }
         })
 
     $sessionHistoryMenuItem.Add_Click({
+            $profileId = Get-ActiveProfile
             $sessionHistoryCheckResult = RenderSessionHistory
             if ($sessionHistoryCheckResult -ne $false) {
-                Invoke-Item ".\ui\SessionHistory.html"
+                Invoke-Item ".\ui\SessionHistory_$profileId.html"
             }
         })
 
@@ -392,6 +405,11 @@ try {
             # Cleanup temp Files
             Remove-Item -Force "$env:TEMP\GmGdn-*"
         })
+
+    $nameProfilesMenuItem.Add_Click({
+        Log "Starting profile naming"
+        ExecuteSettingsFunction -SettingsFunctionToCall $function:RenderProfileSettingsForm
+    })
 
     $openInstallDirectoryMenuItem.Add_Click({
             Log "Opening Install Directory"

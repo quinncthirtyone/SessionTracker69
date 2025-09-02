@@ -58,13 +58,17 @@ class Session {
 }
 
 function UpdateAllStatsInBackground() {
-    RenderGameList -InBackground $true
-    RenderSummary -InBackground $true
-    RenderGamingTime -InBackground $true
-    RenderGamesPerPlatform -InBackground $true
-    RenderMostPlayed -InBackground $true
-    RenderIdleTime -InBackground $true
-    RenderSessionHistory -InBackground $true
+    $profiles = Get-Profiles
+    foreach ($profile in $profiles) {
+        Set-ActiveProfile $profile.id
+        RenderGameList -InBackground $true
+        RenderSummary -InBackground $true
+        RenderGamingTime -InBackground $true
+        RenderGamesPerPlatform -InBackground $true
+        RenderMostPlayed -InBackground $true
+        RenderIdleTime -InBackground $true
+        RenderSessionHistory -InBackground $true
+    }
 }
 
 function RenderGameList() {
@@ -74,19 +78,20 @@ function RenderGameList() {
 
     Log "Rendering all games list."
 
+    $profileId = Get-ActiveProfile
     $workingDirectory = (Get-Location).Path
 
-    $getAllGamesQuery = "SELECT name, icon, platform, play_time, COALESCE(session_count, 0) as session_count, completed, last_play_date, status FROM games"
+    $getAllGamesQuery = "SELECT g.name, g.icon, g.platform, gs.play_time, COALESCE(gs.session_count, 0) as session_count, gs.completed, gs.last_play_date, gs.status FROM games g JOIN game_stats gs ON g.id = gs.game_id WHERE gs.profile_id = $profileId"
     $gameRecords = RunDBQuery $getAllGamesQuery
     if ($gameRecords.Length -eq 0) {
         if(-Not $InBackground) {
-            ShowMessage "No Games found in DB. Please add some games first." "OK" "Error"
+            ShowMessage "No Games found in DB for this profile. Please add some games first." "OK" "Error"
         }
-        Log "Error: Games list empty. Returning"
+        Log "Error: Games list empty for profile $profileId. Returning"
         return $false
     }
 
-    $getMaxPlayTime = "SELECT max(play_time) as 'max_play_time' FROM games"
+    $getMaxPlayTime = "SELECT max(play_time) as 'max_play_time' FROM game_stats WHERE profile_id = $profileId"
     $maxPlayTime = (RunDBQuery $getMaxPlayTime).max_play_time
 
     $games = [System.Collections.Generic.List[object]]::new()
@@ -160,8 +165,15 @@ function RenderGameList() {
     $jsonData = $gamesData | ConvertTo-Json -Depth 5
 
     $report = (Get-Content $workingDirectory\ui\templates\AllGames.html.template) -replace "_GAMESDATA_", $jsonData
+    $report = $report -replace 'Summary.html', "Summary_$profileId.html"
+    $report = $report -replace 'GamingTime.html', "GamingTime_$profileId.html"
+    $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"
+    $report = $report -replace 'AllGames.html', "AllGames_$profileId.html"
+    $report = $report -replace 'IdleTime.html', "IdleTime_$profileId.html"
+    $report = $report -replace 'GamesPerPlatform.html', "GamesPerPlatform_$profileId.html"
+    $report = $report -replace 'SessionHistory.html', "SessionHistory_$profileId.html"
 
-    $report | Out-File -encoding UTF8 $workingDirectory\ui\AllGames.html
+    $report | Out-File -encoding UTF8 "$workingDirectory\ui\AllGames_$profileId.html"
 }
 
 function RenderGamingTime() {
@@ -171,24 +183,32 @@ function RenderGamingTime() {
 
     Log "Rendering time spent gaming"
 
+    $profileId = Get-ActiveProfile
     $workingDirectory = (Get-Location).Path
 
-    $getGamingTimeByGameQuery = "SELECT strftime('%Y-%m-%d', session_start_time, 'unixepoch') as play_date, game_name, SUM(session_duration_minutes) as total_duration, g.color_hex FROM session_history sh JOIN games g ON sh.game_name = g.name GROUP BY play_date, game_name ORDER BY play_date"
+    $getGamingTimeByGameQuery = "SELECT strftime('%Y-%m-%d', session_start_time, 'unixepoch') as play_date, game_name, SUM(session_duration_minutes) as total_duration, g.color_hex FROM session_history sh JOIN games g ON sh.game_name = g.name WHERE sh.profile_id = $profileId GROUP BY play_date, game_name ORDER BY play_date"
 
     $gamingTimeData = RunDBQuery $getGamingTimeByGameQuery
     if ($gamingTimeData.Length -eq 0) {
         if(-Not $InBackground) {
-            ShowMessage "No session history found in DB. Please play some games first." "OK" "Error"
+            ShowMessage "No session history found in DB for this profile. Please play some games first." "OK" "Error"
         }
-        Log "Error: Session history empty. Returning"
+        Log "Error: Session history empty for profile $profileId. Returning"
         return $false
     }
 
     $jsonData = $gamingTimeData | ConvertTo-Json -Depth 5 -Compress
 
     $report = (Get-Content $workingDirectory\ui\templates\GamingTime.html.template) -replace "_GAMINGDATA_", $jsonData
+    $report = $report -replace 'Summary.html', "Summary_$profileId.html"
+    $report = $report -replace 'GamingTime.html', "GamingTime_$profileId.html"
+    $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"
+    $report = $report -replace 'AllGames.html', "AllGames_$profileId.html"
+    $report = $report -replace 'IdleTime.html', "IdleTime_$profileId.html"
+    $report = $report -replace 'GamesPerPlatform.html', "GamesPerPlatform_$profileId.html"
+    $report = $report -replace 'SessionHistory.html', "SessionHistory_$profileId.html"
 
-    $report | Out-File -encoding UTF8 $workingDirectory\ui\GamingTime.html
+    $report | Out-File -encoding UTF8 "$workingDirectory\ui\GamingTime_$profileId.html"
 }
 
 function RenderMostPlayed() {
@@ -198,15 +218,16 @@ function RenderMostPlayed() {
 
     Log "Rendering most played"
 
+    $profileId = Get-ActiveProfile
     $workingDirectory = (Get-Location).Path
 
-    $getGamesPlayTimeDataQuery = "SELECT name, play_time as time, COALESCE(color_hex, '#cccccc') as color_hex FROM games ORDER BY play_time DESC"
+    $getGamesPlayTimeDataQuery = "SELECT g.name, gs.play_time as time, COALESCE(g.color_hex, '#cccccc') as color_hex FROM games g JOIN game_stats gs ON g.id = gs.game_id WHERE gs.profile_id = $profileId ORDER BY gs.play_time DESC"
     $gamesPlayTimeData = RunDBQuery $getGamesPlayTimeDataQuery
     if ($gamesPlayTimeData.Length -eq 0) {
         if(-Not $InBackground) {
-            ShowMessage "No Games found in DB. Please add some games first." "OK" "Error"
+            ShowMessage "No Games found in DB for this profile. Please add some games first." "OK" "Error"
         }
-        Log "Error: Games list empty. Returning"
+        Log "Error: Games list empty for profile $profileId. Returning"
         return $false
     }
 
@@ -217,8 +238,15 @@ function RenderMostPlayed() {
     }
 
     $report = (Get-Content $workingDirectory\ui\templates\MostPlayed_New.html.template) -replace "_GAMINGDATA_", $jsonData
+    $report = $report -replace 'Summary.html', "Summary_$profileId.html"
+    $report = $report -replace 'GamingTime.html', "GamingTime_$profileId.html"
+    $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"
+    $report = $report -replace 'AllGames.html', "AllGames_$profileId.html"
+    $report = $report -replace 'IdleTime.html', "IdleTime_$profileId.html"
+    $report = $report -replace 'GamesPerPlatform.html', "GamesPerPlatform_$profileId.html"
+    $report = $report -replace 'SessionHistory.html', "SessionHistory_$profileId.html"
 
-    $report | Out-File -encoding UTF8 $workingDirectory\ui\MostPlayed.html
+    $report | Out-File -encoding UTF8 "$workingDirectory\ui\MostPlayed_$profileId.html"
 }
 
 function RenderSummary() {
@@ -228,15 +256,16 @@ function RenderSummary() {
 
     Log "Rendering life time summary"
 
+    $profileId = Get-ActiveProfile
     $workingDirectory = (Get-Location).Path
 
-    $getGamesPlayTimeVsSessionDataQuery = "SELECT name, play_time, session_count, completed, status FROM games"
+    $getGamesPlayTimeVsSessionDataQuery = "SELECT g.name, gs.play_time, gs.session_count, gs.completed, gs.status FROM games g JOIN game_stats gs ON g.id = gs.game_id WHERE gs.profile_id = $profileId"
     $gamesPlayTimeVsSessionData = RunDBQuery $getGamesPlayTimeVsSessionDataQuery
     if ($gamesPlayTimeVsSessionData.Length -eq 0) {
         if(-Not $InBackground) {
-            ShowMessage "No Games found in DB. Please add some games first." "OK" "Error"
+            ShowMessage "No Games found in DB for this profile. Please add some games first." "OK" "Error"
         }
-        Log "Error: Games list empty. Returning"
+        Log "Error: Games list empty for profile $profileId. Returning"
         return $false
     }
 
@@ -251,6 +280,7 @@ function RenderSummary() {
                         ON 
                             dp.play_date BETWEEN DATE(datetime(gp.start_date, 'unixepoch')) 
                                             AND DATE(COALESCE(datetime(gp.end_date, 'unixepoch'), datetime('now')))
+                        WHERE dp.profile_id = $profileId
                         GROUP BY 
                             gp.name
                         ORDER BY
@@ -260,7 +290,7 @@ function RenderSummary() {
     $TotalAnnualGamingHoursQuery = "SELECT 
                                     strftime('%Y', play_date) AS Year, 
                                     SUM(ROUND(play_time/60.0,2)) AS TotalPlaytime 
-                                   FROM daily_playtime GROUP BY strftime('%Y', play_date) ORDER BY Year;"
+                                   FROM daily_playtime WHERE profile_id = $profileId GROUP BY strftime('%Y', play_date) ORDER BY Year;"
 
     $totalAnnualGamingHoursData = RunDBQuery $TotalAnnualGamingHoursQuery
 
@@ -292,17 +322,17 @@ function RenderSummary() {
         $null = $gamingPCs.add($thisPC)
     }
 
-    $getGamesSummaryDataQuery = "SELECT COUNT(*) AS total_games, SUM(play_time) AS total_play_time, SUM(session_count) AS total_sessions, SUM(idle_time) AS total_idle_time FROM games"
+    $getGamesSummaryDataQuery = "SELECT COUNT(*) AS total_games, SUM(play_time) AS total_play_time, SUM(session_count) AS total_sessions, SUM(idle_time) AS total_idle_time FROM game_stats WHERE profile_id = $profileId"
     $gamesSummaryData = RunDBQuery $getGamesSummaryDataQuery
 
-    $getPlayDateSummaryQuery = "SELECT MIN(play_date) AS min_play_date, MAX(play_date) AS max_play_date FROM daily_playtime"
+    $getPlayDateSummaryQuery = "SELECT MIN(play_date) AS min_play_date, MAX(play_date) AS max_play_date FROM daily_playtime WHERE profile_id = $profileId"
     $playDateSummary = RunDBQuery $getPlayDateSummaryQuery
 
-    if ($null -eq $playDateSummary.min_play_date -or $null -eq $playDateSummary.max_play_date) {
+    if (($null -eq $playDateSummary) -or ($null -eq $playDateSummary.min_play_date) -or ($null -eq $playDateSummary.max_play_date)) {
         if(-Not $InBackground) {
-            ShowMessage "No play time found in DB. Please play some games first." "OK" "Error"
+            ShowMessage "No play time found in DB for this profile. Please play some games first." "OK" "Error"
         }
-        Log "Error: No playtime found in DB. Returning"
+        Log "Error: No playtime found in DB for profile $profileId. Returning"
         return $false
     }
 
@@ -331,8 +361,15 @@ function RenderSummary() {
     $report = $report -replace "_SUMMARYSTATEMENT_", $summaryStatement
     $report = $report -replace "_ANNUALGAMINGHOURSTABLE_", $annualHoursTable
     $report = $report -replace "_PCTABLE_", $pcTable
+    $report = $report -replace 'Summary.html', "Summary_$profileId.html"
+    $report = $report -replace 'GamingTime.html', "GamingTime_$profileId.html"
+    $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"
+    $report = $report -replace 'AllGames.html', "AllGames_$profileId.html"
+    $report = $report -replace 'IdleTime.html', "IdleTime_$profileId.html"
+    $report = $report -replace 'GamesPerPlatform.html', "GamesPerPlatform_$profileId.html"
+    $report = $report -replace 'SessionHistory.html', "SessionHistory_$profileId.html"
 
-    $report | Out-File -encoding UTF8 $workingDirectory\ui\Summary.html
+    $report | Out-File -encoding UTF8 "$workingDirectory\ui\Summary_$profileId.html"
 }
 
 function RenderIdleTime() {
@@ -342,19 +379,20 @@ function RenderIdleTime() {
 
     Log "Rendering Idle time"
 
+    $profileId = Get-ActiveProfile
     $workingDirectory = (Get-Location).Path
 
-    $getGamesIdleTimeDataQuery = "SELECT name, ROUND(idle_time / 60.0, 2) as time FROM games WHERE idle_time > 0 ORDER BY idle_time DESC"
+    $getGamesIdleTimeDataQuery = "SELECT g.name, ROUND(gs.idle_time / 60.0, 2) as time FROM games g JOIN game_stats gs ON g.id = gs.game_id WHERE gs.idle_time > 0 AND gs.profile_id = $profileId ORDER BY gs.idle_time DESC"
     $gamesIdleTimeData = RunDBQuery $getGamesIdleTimeDataQuery
     if ($gamesIdleTimeData.Length -eq 0) {
         if(-Not $InBackground) {
-            ShowMessage "No Idle Games found in DB." "OK" "Error"
+            ShowMessage "No Idle Games found in DB for this profile." "OK" "Error"
         }
-        Log "Error: Idle Games list empty. Returning"
+        Log "Error: Idle Games list empty for profile $profileId. Returning"
         return $false
     }
 
-    $getTotalIdleTimeQuery = "SELECT SUM(idle_time) as total_idle_time FROM games"
+    $getTotalIdleTimeQuery = "SELECT SUM(idle_time) as total_idle_time FROM game_stats WHERE profile_id = $profileId"
     $totalIdleTime = (RunDBQuery $getTotalIdleTimeQuery).total_idle_time
     $totalIdleTimeString = PlayTimeMinsToString $totalIdleTime
 
@@ -362,8 +400,15 @@ function RenderIdleTime() {
 
     $report = (Get-Content $workingDirectory\ui\templates\IdleTime.html.template) -replace "_GAMESIDLETIMETABLE_", $table
     $report = $report -replace "_TOTALIDLETIME_", $totalIdleTimeString
+    $report = $report -replace 'Summary.html', "Summary_$profileId.html"
+    $report = $report -replace 'GamingTime.html', "GamingTime_$profileId.html"
+    $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"
+    $report = $report -replace 'AllGames.html', "AllGames_$profileId.html"
+    $report = $report -replace 'IdleTime.html', "IdleTime_$profileId.html"
+    $report = $report -replace 'GamesPerPlatform.html', "GamesPerPlatform_$profileId.html"
+    $report = $report -replace 'SessionHistory.html', "SessionHistory_$profileId.html"
 
-    $report | Out-File -encoding UTF8 $workingDirectory\ui\IdleTime.html
+    $report | Out-File -encoding UTF8 "$workingDirectory\ui\IdleTime_$profileId.html"
 }
 
 function RenderGamesPerPlatform() {
@@ -373,23 +418,31 @@ function RenderGamesPerPlatform() {
 
     Log "Rendering games per platform"
 
+    $profileId = Get-ActiveProfile
     $workingDirectory = (Get-Location).Path
 
-    $getGamesPerPlatformDataQuery = "SELECT  platform, COUNT(name) FROM games GROUP BY platform"
+    $getGamesPerPlatformDataQuery = "SELECT g.platform, COUNT(g.name) FROM games g JOIN game_stats gs ON g.id = gs.game_id WHERE gs.profile_id = $profileId GROUP BY g.platform"
     $getGamesPerPlatformData = RunDBQuery $getGamesPerPlatformDataQuery
     if ($getGamesPerPlatformData.Length -eq 0) {
         if(-Not $InBackground) {
-            ShowMessage "No Games found in DB. Please add some games first." "OK" "Error"
+            ShowMessage "No Games found in DB for this profile. Please add some games first." "OK" "Error"
         }
-        Log "Error: Games list empty. Returning"
+        Log "Error: Games list empty for profile $profileId. Returning"
         return $false
     }
 
     $table = $getGamesPerPlatformData | ConvertTo-Html -Fragment
 
     $report = (Get-Content $workingDirectory\ui\templates\GamesPerPlatform.html.template) -replace "_GAMESPERPLATFORMTABLE_", $table
+    $report = $report -replace 'Summary.html', "Summary_$profileId.html"
+    $report = $report -replace 'GamingTime.html', "GamingTime_$profileId.html"
+    $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"
+    $report = $report -replace 'AllGames.html', "AllGames_$profileId.html"
+    $report = $report -replace 'IdleTime.html', "IdleTime_$profileId.html"
+    $report = $report -replace 'GamesPerPlatform.html', "GamesPerPlatform_$profileId.html"
+    $report = $report -replace 'SessionHistory.html', "SessionHistory_$profileId.html"
 
-    $report | Out-File -encoding UTF8 $workingDirectory\ui\GamesPerPlatform.html
+    $report | Out-File -encoding UTF8 "$workingDirectory\ui\GamesPerPlatform_$profileId.html"
 }
 
 function RenderSessionHistory() {
@@ -399,9 +452,10 @@ function RenderSessionHistory() {
 
     Log "Rendering session history data for client-side processing."
 
+    $profileId = Get-ActiveProfile
     $workingDirectory = (Get-Location).Path
 
-    $getSessionHistoryQuery = "SELECT sh.game_name, sh.session_start_time, sh.session_duration_minutes, g.icon FROM session_history sh JOIN games g ON sh.game_name = g.name ORDER BY sh.session_start_time DESC"
+    $getSessionHistoryQuery = "SELECT sh.game_name, sh.session_start_time, sh.session_duration_minutes, g.icon FROM session_history sh JOIN games g ON sh.game_name = g.name WHERE sh.profile_id = $profileId ORDER BY sh.session_start_time DESC"
     $sessionRecords = RunDBQuery $getSessionHistoryQuery
 
     $sessionData = [System.Collections.Generic.List[object]]::new()
@@ -458,7 +512,15 @@ function RenderSessionHistory() {
     }
 
     $report = (Get-Content $workingDirectory\ui\templates\SessionHistory.html.template) -replace '_SESSIONDATA_', $jsonData
-    $report | Out-File -encoding UTF8 $workingDirectory\ui\SessionHistory.html
+    $report = $report -replace 'Summary.html', "Summary_$profileId.html"
+    $report = $report -replace 'GamingTime.html', "GamingTime_$profileId.html"
+    $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"
+    $report = $report -replace 'AllGames.html', "AllGames_$profileId.html"
+    $report = $report -replace 'IdleTime.html', "IdleTime_$profileId.html"
+    $report = $report -replace 'GamesPerPlatform.html', "GamesPerPlatform_$profileId.html"
+    $report = $report -replace 'SessionHistory.html', "SessionHistory_$profileId.html"
+
+    $report | Out-File -encoding UTF8 "$workingDirectory\ui\SessionHistory_$profileId.html"
 }
 
 function RenderAboutDialog() {
@@ -500,7 +562,7 @@ function RenderAboutDialog() {
 }
 
 function RenderQuickView() {
-    $quickViewForm = CreateForm "Quick View" 420 100 ".\icons\running.ico" # Start with a small height, it will be resized
+    $quickViewForm = CreateForm "Quick View" 420 100 ".\icons\running.ico"
     $quickViewForm.MaximizeBox = $false
     $quickViewForm.MinimizeBox = $false
     $quickViewForm.StartPosition = [System.Windows.Forms.FormStartPosition]::Manual
@@ -520,28 +582,62 @@ function RenderQuickView() {
     $dataGridView.DefaultCellStyle.Padding = New-Object System.Windows.Forms.Padding(2, 2, 2, 2)
     $dataGridView.DefaultCellStyle.BackColor = [System.Drawing.Color]::FromArgb(240, 240, 240)
 
+    $doubleBufferProperty = $dataGridView.GetType().GetProperty('DoubleBuffered', [System.Reflection.BindingFlags]::NonPublic -bor [System.Reflection.BindingFlags]::Instance)
+    $doubleBufferProperty.SetValue($dataGridView, $true, $null)
+
+    $bottomPanel = New-Object System.Windows.Forms.TableLayoutPanel
+    $bottomPanel.Dock = [System.Windows.Forms.DockStyle]::Bottom
+    $bottomPanel.ColumnCount = 2
+    $bottomPanel.RowCount = 1
+    $bottomPanel.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle([System.Windows.Forms.SizeType]::Percent, 50)))
+    $bottomPanel.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle([System.Windows.Forms.SizeType]::Percent, 50)))
+    $bottomPanel.Height = 30
+
     $toggleSwitch = New-Object System.Windows.Forms.CheckBox
     $toggleSwitch.Text = "Show Most Played"
-    $toggleSwitch.Dock = [System.Windows.Forms.DockStyle]::Bottom
+    $toggleSwitch.Dock = [System.Windows.Forms.DockStyle]::Fill
     $toggleSwitch.Appearance = [System.Windows.Forms.Appearance]::Button
     $toggleSwitch.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
     $toggleSwitch.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     $toggleSwitch.FlatAppearance.BorderSize = 0
     $toggleSwitch.BackColor = [System.Drawing.Color]::White
 
-    $doubleBufferProperty = $dataGridView.GetType().GetProperty('DoubleBuffered', [System.Reflection.BindingFlags]::NonPublic -bor [System.Reflection.BindingFlags]::Instance)
-    $doubleBufferProperty.SetValue($dataGridView, $true, $null)
+    $profileSwitch = New-Object System.Windows.Forms.Button
+    $profileSwitch.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $profileSwitch.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $profileSwitch.FlatAppearance.BorderSize = 0
+    $profileSwitch.BackColor = [System.Drawing.Color]::White
+
+    $bottomPanel.Controls.Add($toggleSwitch, 0, 0)
+    $bottomPanel.Controls.Add($profileSwitch, 1, 0)
 
     function Resize-Form() {
         $totalRowsHeight = 0
         foreach ($row in $dataGridView.Rows) {
             $totalRowsHeight += $row.Height
         }
-        $headerHeight = $dataGridView.ColumnHeadersHeight
-        $toggleHeight = $toggleSwitch.Height
+        $headerHeight = if ($dataGridView.ColumnHeadersVisible) { $dataGridView.ColumnHeadersHeight } else { 0 }
+        $toggleHeight = $bottomPanel.Height
         $newHeight = $totalRowsHeight + $headerHeight + $toggleHeight
         $quickViewForm.ClientSize = New-Object System.Drawing.Size($quickViewForm.ClientSize.Width, $newHeight)
         $quickViewForm.Top = $screenBounds.Height - $quickViewForm.Height - 60
+    }
+
+    function Load-Data() {
+        if ($toggleSwitch.Checked) {
+            Load-MostPlayed
+        } else {
+            Load-RecentSessions
+        }
+        $dataGridView.ClearSelection()
+        Update-ProfileSwitchText
+    }
+
+    function Update-ProfileSwitchText() {
+        $profiles = Get-Profiles
+        $activeProfileId = Get-ActiveProfile
+        $inactiveProfile = $profiles | Where-Object { $_.id -ne $activeProfileId } | Select-Object -First 1
+        $profileSwitch.Text = "Switch to " + $inactiveProfile.name
     }
 
     function Load-RecentSessions {
@@ -550,12 +646,13 @@ function RenderQuickView() {
         $dataGridView.Rows.Clear()
         $dataGridView.Columns.Clear()
 
-        $lastFiveSessionsQuery = "SELECT sh.game_name, g.icon, sh.session_duration_minutes, sh.session_start_time FROM session_history sh JOIN games g ON sh.game_name = g.name ORDER BY sh.session_start_time DESC LIMIT 5"
+        $profileId = Get-ActiveProfile
+        $lastFiveSessionsQuery = "SELECT sh.game_name, g.icon, sh.session_duration_minutes, sh.session_start_time FROM session_history sh JOIN games g ON sh.game_name = g.name WHERE sh.profile_id = {0} ORDER BY sh.session_start_time DESC LIMIT 5" -f $profileId
         $sessionRecords = RunDBQuery $lastFiveSessionsQuery
         if ($sessionRecords.Length -eq 0) {
-            ShowMessage "No sessions found in DB. Please play some games first." "OK" "Error"
-            Log "Error: Session history empty. Returning"
-            $quickViewForm.Close()
+            $dataGridView.Columns.Clear()
+            $dataGridView.Rows.Clear()
+            $dataGridView.Refresh()
             return
         }
 
@@ -591,12 +688,13 @@ function RenderQuickView() {
         $dataGridView.Rows.Clear()
         $dataGridView.Columns.Clear()
 
-        $mostPlayedQuery = "SELECT name, icon, play_time, last_play_date FROM games ORDER BY play_time DESC LIMIT 5"
+        $profileId = Get-ActiveProfile
+        $mostPlayedQuery = "SELECT g.name, g.icon, gs.play_time, gs.last_play_date FROM games g JOIN game_stats gs ON g.id = gs.game_id WHERE gs.profile_id = {0} ORDER BY gs.play_time DESC LIMIT 5" -f $profileId
         $gameRecords = RunDBQuery $mostPlayedQuery
         if ($gameRecords.Length -eq 0) {
-            ShowMessage "No Games found in DB. Please add some games first." "OK" "Error"
-            Log "Error: Games list empty. Returning"
-            $quickViewForm.Close()
+            $dataGridView.Columns.Clear()
+            $dataGridView.Rows.Clear()
+            $dataGridView.Refresh()
             return
         }
 
@@ -627,21 +725,23 @@ function RenderQuickView() {
     }
 
     $toggleSwitch.Add_CheckedChanged({
-        if ($toggleSwitch.Checked) {
-            Load-MostPlayed
-        } else {
-            Load-RecentSessions
-        }
-        $dataGridView.ClearSelection()
+        Load-Data
+    })
+
+    $profileSwitch.Add_Click({
+        $profiles = Get-Profiles
+        $activeProfileId = Get-ActiveProfile
+        $inactiveProfile = $profiles | Where-Object { $_.id -ne $activeProfileId } | Select-Object -First 1
+        Set-ActiveProfile $inactiveProfile.id
+        Load-Data
     })
 
     $quickViewForm.Controls.Add($dataGridView)
-    $quickViewForm.Controls.Add($toggleSwitch)
+    $quickViewForm.Controls.Add($bottomPanel)
 
     $quickViewForm.Add_Deactivate({ $quickViewForm.Dispose() })
     $quickViewForm.Add_Shown({
-        Load-RecentSessions
-        $dataGridView.ClearSelection()
+        Load-Data
         $quickViewForm.Activate()
     })
 
