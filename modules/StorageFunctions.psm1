@@ -16,7 +16,8 @@ function SaveGame() {
         [string]$GameExeName,
         [string]$GameIconPath,
         [string]$GamePlatform,
-        [string]$GameRomBasedName = ""
+        [string]$GameRomBasedName = "",
+        [bool]$GameIdleDetection = $true
     )
 
     $profileId = Get-ActiveProfile
@@ -26,14 +27,15 @@ function SaveGame() {
     # Add game to shared games table if not exists
     $gameExists = DoesEntityExists "games" "name" $GameName
     if ($null -eq $gameExists) {
-        $addGameQuery = "INSERT INTO games (name, exe_name, platform, icon, color_hex, rom_based_name) VALUES (@GameName, @GameExeName, @GamePlatform, @gameIconBytes, @GameIconColor, @GameRomBasedName)"
+        $addGameQuery = "INSERT INTO games (name, exe_name, platform, icon, color_hex, rom_based_name, idle_detection) VALUES (@GameName, @GameExeName, @GamePlatform, @gameIconBytes, @GameIconColor, @GameRomBasedName, @GameIdleDetection)"
         RunDBQuery $addGameQuery @{
-            GameName         = $GameName.Trim()
-            GameExeName      = $GameExeName.Trim()
-            GamePlatform     = $GamePlatform.Trim()
-            gameIconBytes    = $gameIconBytes
-            GameIconColor    = $gameIconColor
-            GameRomBasedName = $GameRomBasedName.Trim()
+            GameName          = $GameName.Trim()
+            GameExeName       = $GameExeName.Trim()
+            GamePlatform      = $GamePlatform.Trim()
+            gameIconBytes     = $gameIconBytes
+            GameIconColor     = $gameIconColor
+            GameRomBasedName  = $GameRomBasedName.Trim()
+            GameIdleDetection = $GameIdleDetection
         }
     }
 
@@ -41,7 +43,7 @@ function SaveGame() {
     $gameId = (RunDBQuery "SELECT id FROM games WHERE name LIKE '$GameName'").id
     $gameStatsExist = RunDBQuery "SELECT id FROM game_stats WHERE game_id = $gameId AND profile_id = $profileId"
     if ($null -eq $gameStatsExist) {
-        $addGameStatsQuery = "INSERT INTO game_stats (game_id, profile_id, play_time, last_play_date, completed, session_count, idle_time, disable_idle_detection) VALUES (@GameId, @ProfileId, 0, 0, 'FALSE', 0, 0, 0)"
+        $addGameStatsQuery = "INSERT INTO game_stats (game_id, profile_id, play_time, last_play_date, completed, session_count, idle_time) VALUES (@GameId, @ProfileId, 0, 0, 'FALSE', 0, 0)"
         RunDBQuery $addGameStatsQuery @{
             GameId    = $gameId
             ProfileId = $profileId
@@ -132,11 +134,10 @@ function UpdateGameOnEdit() {
         [string]$GameName,
         [string]$GameExeName,
         [string]$GameIconPath,
-        [string]$GamePlayTime,
         [string]$GameCompleteStatus,
         [string]$GamePlatform,
         [string]$GameStatus,
-        [bool]$GameDisableIdleDetection
+        [bool]$GameIdleDetection
     )
 
     $profileId = Get-ActiveProfile
@@ -145,22 +146,33 @@ function UpdateGameOnEdit() {
     # Update shared game data
     $gameIconBytes = (Get-Content -Path $GameIconPath -Encoding byte -Raw);
     $gameIconColor = Get-DominantColor $gameIconBytes
-    $updateGameQuery = "UPDATE games SET name = @GameName, exe_name = @GameExeName, platform = @GamePlatform, icon = @gameIconBytes, color_hex = @GameIconColor WHERE id = $gameId"
+    $updateGameQuery = "UPDATE games SET name = @GameName, exe_name = @GameExeName, platform = @GamePlatform, icon = @gameIconBytes, color_hex = @GameIconColor, idle_detection = @GameIdleDetection WHERE id = $gameId"
     RunDBQuery $updateGameQuery @{
-        GameName     = $GameName.Trim()
-        GameExeName  = $GameExeName.Trim()
-        GamePlatform = $GamePlatform.Trim()
-        gameIconBytes = $gameIconBytes
-        GameIconColor = $gameIconColor
+        GameName          = $GameName.Trim()
+        GameExeName       = $GameExeName.Trim()
+        GamePlatform      = $GamePlatform.Trim()
+        gameIconBytes     = $gameIconBytes
+        GameIconColor     = $gameIconColor
+        GameIdleDetection = $GameIdleDetection
     }
 
-    # Update profile-specific game stats
-    $updateGameStatsQuery = "UPDATE game_stats SET play_time = @GamePlayTime, completed = @GameCompleteStatus, status = @GameStatus, disable_idle_detection = @GameDisableIdleDetection WHERE game_id = $gameId AND profile_id = $profileId"
-    RunDBQuery $updateGameStatsQuery @{
-        GamePlayTime             = $GamePlayTime
-        GameCompleteStatus       = $GameCompleteStatus
-        GameStatus               = $GameStatus
-        GameDisableIdleDetection = $GameDisableIdleDetection
+    # Upsert profile-specific game stats
+    $gameStatsExist = RunDBQuery "SELECT id FROM game_stats WHERE game_id = $gameId AND profile_id = $profileId"
+    if ($null -ne $gameStatsExist) {
+        $updateGameStatsQuery = "UPDATE game_stats SET completed = @GameCompleteStatus, status = @GameStatus WHERE game_id = $gameId AND profile_id = $profileId"
+        RunDBQuery $updateGameStatsQuery @{
+            GameCompleteStatus = $GameCompleteStatus
+            GameStatus         = $GameStatus
+        }
+    }
+    else {
+        $insertGameStatsQuery = "INSERT INTO game_stats (game_id, profile_id, completed, status, play_time, session_count, last_play_date, idle_time) VALUES (@GameId, @ProfileId, @GameCompleteStatus, @GameStatus, 0, 0, 0, 0)"
+        RunDBQuery $insertGameStatsQuery @{
+            GameId             = $gameId
+            ProfileId          = $profileId
+            GameCompleteStatus = $GameCompleteStatus
+            GameStatus         = $GameStatus
+        }
     }
 }
 

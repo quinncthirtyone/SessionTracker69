@@ -10,7 +10,8 @@
                             platform TEXT,
                             icon BLOB,
                             color_hex TEXT,
-                            rom_based_name TEXT)"
+                            rom_based_name TEXT,
+                            idle_detection BOOLEAN DEFAULT TRUE)"
         Invoke-SqliteQuery -Query $createGamesTableQuery -SQLiteConnection $dbConnection | Out-Null
 
         $createPlatformsTableQuery = "CREATE TABLE IF NOT EXISTS emulated_platforms (
@@ -53,7 +54,6 @@
                             status TEXT,
                             session_count INTEGER,
                             idle_time INTEGER,
-                            disable_idle_detection BOOLEAN,
                             FOREIGN KEY(game_id) REFERENCES games(id),
                             FOREIGN KEY(profile_id) REFERENCES profiles(id))"
         Invoke-SqliteQuery -Query $createGameStatsTableQuery -SQLiteConnection $dbConnection | Out-Null
@@ -80,14 +80,42 @@
             # 1. Rename old games table
             Invoke-SqliteQuery -Query "ALTER TABLE games RENAME TO games_old" -SQLiteConnection $dbConnection | Out-Null
             # 2. Create new games and game_stats tables
-            Invoke-SqliteQuery -Query $createGamesTableQuery -SQLiteConnection $dbConnection | Out-Null
-            Invoke-SqliteQuery -Query $createGameStatsTableQuery -SQLiteConnection $dbConnection | Out-Null
+            Invoke-SqliteQuery -Query "CREATE TABLE IF NOT EXISTS games (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, exe_name TEXT, platform TEXT, icon BLOB, color_hex TEXT, rom_based_name TEXT)" -SQLiteConnection $dbConnection | Out-Null
+            Invoke-SqliteQuery -Query "CREATE TABLE IF NOT EXISTS game_stats (id INTEGER PRIMARY KEY AUTOINCREMENT, game_id INTEGER NOT NULL, profile_id INTEGER NOT NULL, play_time INTEGER, last_play_date INTEGER, completed TEXT, status TEXT, session_count INTEGER, idle_time INTEGER, disable_idle_detection BOOLEAN, FOREIGN KEY(game_id) REFERENCES games(id), FOREIGN KEY(profile_id) REFERENCES profiles(id))" -SQLiteConnection $dbConnection | Out-Null
             # 3. Migrate data
             Invoke-SqliteQuery -Query "INSERT INTO games (name, exe_name, platform, icon, color_hex, rom_based_name) SELECT name, exe_name, platform, icon, color_hex, rom_based_name FROM games_old" -SQLiteConnection $dbConnection | Out-Null
             Invoke-SqliteQuery -Query "INSERT INTO game_stats (game_id, profile_id, play_time, last_play_date, completed, status, session_count, idle_time, disable_idle_detection) SELECT g.id, 1, o.play_time, o.last_play_date, o.completed, o.status, o.session_count, o.idle_time, o.disable_idle_detection FROM games_old o JOIN games g ON o.name = g.name" -SQLiteConnection $dbConnection | Out-Null
             # 4. Drop old table
             Invoke-SqliteQuery -Query "DROP TABLE games_old" -SQLiteConnection $dbConnection | Out-Null
             Log "Migration to schema version 2 complete."
+        }
+
+        # Migration for idle_detection column rename
+        $gameStatsTableSchema = Invoke-SqliteQuery -query "PRAGMA table_info('game_stats')" -SQLiteConnection $dbConnection
+        if ($gameStatsTableSchema.name.Contains("disable_idle_detection")) {
+            Log "Schema version 3 detected. Migrating to version 4."
+            if (-Not $gameStatsTableSchema.name.Contains("idle_detection")) {
+                Invoke-SqliteQuery -Query "ALTER TABLE game_stats ADD COLUMN idle_detection BOOLEAN DEFAULT TRUE" -SQLiteConnection $dbConnection | Out-Null
+            }
+            Invoke-SqliteQuery -Query "UPDATE game_stats SET idle_detection = (CASE WHEN disable_idle_detection = 1 THEN 0 ELSE 1 END)" -SQLiteConnection $dbConnection | Out-Null
+            Log "Migration to schema version 4 complete."
+        }
+
+        # Migration to move idle_detection from game_stats to games
+        $gameStatsTableSchema = Invoke-SqliteQuery -query "PRAGMA table_info('game_stats')" -SQLiteConnection $dbConnection
+        $gamesTableSchema = Invoke-SqliteQuery -query "PRAGMA table_info('games')" -SQLiteConnection $dbConnection
+        if ($gameStatsTableSchema.name.Contains("idle_detection") -or $gameStatsTableSchema.name.Contains("disable_idle_detection")) {
+            Log "Schema version 4 detected. Migrating to version 5."
+            if (-Not $gamesTableSchema.name.Contains("idle_detection")) {
+                Invoke-SqliteQuery -Query "ALTER TABLE games ADD COLUMN idle_detection BOOLEAN DEFAULT TRUE" -SQLiteConnection $dbConnection | Out-Null
+            }
+            Invoke-SqliteQuery -Query "UPDATE games SET idle_detection = (SELECT idle_detection FROM game_stats WHERE game_stats.game_id = games.id AND profile_id = 1) WHERE EXISTS (SELECT 1 FROM game_stats WHERE game_stats.game_id = games.id AND profile_id = 1)" -SQLiteConnection $dbConnection | Out-Null
+
+            Invoke-SqliteQuery -Query "ALTER TABLE game_stats RENAME TO game_stats_old" -SQLiteConnection $dbConnection | Out-Null
+            Invoke-SqliteQuery -Query $createGameStatsTableQuery -SQLiteConnection $dbConnection | Out-Null
+            Invoke-SqliteQuery -Query "INSERT INTO game_stats (id, game_id, profile_id, play_time, last_play_date, completed, status, session_count, idle_time) SELECT id, game_id, profile_id, play_time, last_play_date, completed, status, session_count, idle_time FROM game_stats_old" -SQLiteConnection $dbConnection | Out-Null
+            Invoke-SqliteQuery -Query "DROP TABLE game_stats_old" -SQLiteConnection $dbConnection | Out-Null
+            Log "Migration to schema version 5 complete."
         }
 
         # Add profile_id to session_history and daily_playtime if they don't have it
