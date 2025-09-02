@@ -400,8 +400,8 @@ function RenderIdleTime() {
     $profileId = Get-ActiveProfile
     $workingDirectory = (Get-Location).Path
 
-    $getGamesIdleTimeDataQuery = "SELECT g.name, ROUND(gs.idle_time / 60.0, 2) as time FROM games g JOIN game_stats gs ON g.id = gs.game_id WHERE gs.idle_time > 0 AND gs.profile_id = $profileId ORDER BY gs.idle_time DESC"
-    $gamesIdleTimeData = RunDBQuery $getGamesIdleTimeDataQuery
+    $getGamesIdleTimeDataQuery = "SELECT g.name, ROUND(gs.idle_time / 60.0, 2) as time, COALESCE(g.color_hex, '#cccccc') as color_hex FROM games g JOIN game_stats gs ON g.id = gs.game_id WHERE gs.idle_time > 0 AND gs.profile_id = $profileId ORDER BY gs.idle_time DESC"
+    $gamesIdleTimeData = @(RunDBQuery $getGamesIdleTimeDataQuery)
     if ($gamesIdleTimeData.Length -eq 0) {
         if(-Not $InBackground) {
             ShowMessage "No Idle Games found in DB for this profile." "OK" "Error"
@@ -412,16 +412,22 @@ function RenderIdleTime() {
 
     $getTotalIdleTimeQuery = "SELECT SUM(idle_time) as total_idle_time FROM game_stats WHERE profile_id = $profileId"
     $totalIdleTime = (RunDBQuery $getTotalIdleTimeQuery).total_idle_time
-    $totalIdleTimeString = PlayTimeMinsToString $totalIdleTime
+    $totalIdleTimeInHours = [math]::Round($totalIdleTime / 60.0, 2)
+    $totalIdleTimeObject = [pscustomobject]@{
+        name      = "AFK Total"
+        time      = $totalIdleTimeInHours
+        color_hex = '#ff6384'
+    }
+    $gamesIdleTimeData += $totalIdleTimeObject
 
-    $table = $gamesIdleTimeData | ConvertTo-Html -Fragment
+    $jsonData = $gamesIdleTimeData | ConvertTo-Json -Depth 5 -Compress
 
-    $report = (Get-Content $workingDirectory\ui\templates\IdleTime.html.template) -replace "_GAMESIDLETIMETABLE_", $table
-    $report = $report -replace "_TOTALIDLETIME_", $totalIdleTimeString
+    $report = (Get-Content $workingDirectory\ui\templates\IdleTime.html.template) -replace "_GAMINGDATA_", $jsonData
     $report = $report -replace 'Summary.html', "Summary_$profileId.html"
     $report = $report -replace 'GamingTime.html', "GamingTime_$profileId.html"
     $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"
     $report = $report -replace 'AllGames.html', "AllGames_$profileId.html"
+    $report = $report -replace 'IdleTime.html', "IdleTime_$profileId.html"
     $report = $report -replace 'SessionHistory.html', "SessionHistory_$profileId.html"
 
     $switcherButton = Get-ProfileSwitcherButton $profileId "IdleTime"
