@@ -1,4 +1,4 @@
-﻿function SetupDatabase() {
+function SetupDatabase() {
     try {
         $dbConnection = New-SQLiteConnection -DataSource ".\GamingGaiden.db"
 
@@ -131,27 +131,6 @@
             Invoke-SqliteQuery -Query $createDailyPlaytimeTableQuery -SQLiteConnection $dbConnection | Out-Null
             Invoke-SqliteQuery -Query "INSERT INTO daily_playtime (play_date, play_time, profile_id) SELECT play_date, play_time, 1 FROM daily_playtime_old" -SQLiteConnection $dbConnection | Out-Null
             Invoke-SqliteQuery -Query "DROP TABLE daily_playtime_old" -SQLiteConnection $dbConnection | Out-Null
-        }
-
-        # Backfill color_hex for existing games
-        Log "Checking for games with missing color data."
-        $gamesMissingColor = Invoke-SqliteQuery -Query "SELECT name, icon FROM games WHERE color_hex IS NULL" -SQLiteConnection $dbConnection
-        if ($gamesMissingColor.Length -gt 0) {
-            Log "Found $($gamesMissingColor.Length) games with missing color data. Backfilling now..."
-            foreach ($game in $gamesMissingColor) {
-                $gameName = $game.name
-                $iconBytes = $game.icon
-                $dominantColor = Get-DominantColor $iconBytes
-
-                $updateColorQuery = "UPDATE games SET color_hex = @color WHERE name = @name"
-                $updateParams = @{
-                    color = $dominantColor
-                    name = $gameName
-                }
-                Invoke-SqliteQuery -Query $updateColorQuery -SQLiteConnection $dbConnection -SqlParameters $updateParams | Out-Null
-                Log "Updated color for $gameName to $dominantColor"
-            }
-            Log "Color backfill complete."
         }
 
         $dbConnection.Close()
