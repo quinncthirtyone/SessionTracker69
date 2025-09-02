@@ -13,16 +13,6 @@ body {
   height: 81.7%;
 }
 
-#total-label {
-  display: flex;
-  margin-top: 20px;
-  margin-bottom: 20px;
-  width: 300px;
-  justify-content: space-around;
-  font-family: monospace;
-  font-size: 18px;
-}
-
 #navigation-bar {
   display: flex;
   width: 100%;
