@@ -1,4 +1,4 @@
-﻿function Set-ActiveProfile($ProfileId) {
+function Set-ActiveProfile($ProfileId) {
     Log "Setting active profile to $ProfileId"
     $updateProfileQuery = "UPDATE profiles SET is_active = CASE WHEN id = @ProfileId THEN 1 ELSE 0 END"
     RunDBQuery $updateProfileQuery @{ ProfileId = $ProfileId }

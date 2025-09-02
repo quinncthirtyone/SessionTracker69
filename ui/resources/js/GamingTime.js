@@ -127,7 +127,7 @@ function updateChart(year, month, isYearly = false) {
         y: {
           stacked: true,
           beginAtZero: true,
-          title: chartTitleConfig("PlayTime", 15),
+          title: chartTitleConfig("PlayTime (hours)", 15),
           ticks: {
             callback: function(value) {
               const hours = Math.floor(value / 60);

@@ -8,6 +8,7 @@
       href="./resources/images/favicon.ico"
     />
     <link rel="stylesheet" href="./resources/css/Summary.css" />
+    <link rel="stylesheet" href="./resources/css/ProfileSwitcher.css" />
     <script src="./resources/js/jquery-3.7.1.min.js"></script>
     <script src="./resources/js/purify.min.js"></script>
     <script src="./resources/js/chart.js"></script>
@@ -85,13 +86,13 @@
     <script src="./resources/js/common.js"></script>
     <script src="./resources/js/Summary.js"></script>
     <div id="navigation-bar">
-      <button class="custom-button" id="summary-button" onclick="window.location.href='file:///C:/ProgramData/GamingGaiden/ui/Summary.html';">Life Time Summary</button>
-      <button class="custom-button" id="gaming-time-button" onclick="window.location.href='file:///C:/ProgramData/GamingGaiden/ui/GamingTime.html';">Time Spent Gaming</button>
-      <button class="custom-button" id="most-played-button" onclick="window.location.href='file:///C:/ProgramData/GamingGaiden/ui/MostPlayed.html';">Most Played</button>
-      <button class="custom-button" id="all-games-button" onclick="window.location.href='file:///C:/ProgramData/GamingGaiden/ui/AllGames.html';">All Games</button>
-      <button class="custom-button" id="idle-time-button" onclick="window.location.href='file:///C:/ProgramData/GamingGaiden/ui/IdleTime.html';">Idle Time</button>
-      <button class="custom-button" id="games-per-platform-button" onclick="window.location.href='file:///C:/ProgramData/GamingGaiden/ui/GamesPerPlatform.html';">Games Per Platform</button>
-      <button class="custom-button" id="session-history-button" onclick="window.location.href='file:///C:/ProgramData/GamingGaiden/ui/SessionHistory.html';">Session History</button>
+      <button class="custom-button" id="summary-button" onclick="window.location.href='./Summary.html';">Life Time Summary</button>
+      <button class="custom-button" id="gaming-time-button" onclick="window.location.href='./GamingTime.html';">Time Spent Gaming</button>
+      <button class="custom-button" id="most-played-button" onclick="window.location.href='./MostPlayed.html';">Most Played</button>
+      <button class="custom-button" id="all-games-button" onclick="window.location.href='./AllGames.html';">All Games</button>
+      <button class="custom-button" id="idle-time-button" onclick="window.location.href='./IdleTime.html';">Idle Time</button>
+      <button class="custom-button" id="session-history-button" onclick="window.location.href='./SessionHistory.html';">Session History</button>
+      _PROFILE_SWITCHER_
     </div>
   </body>
 </html>

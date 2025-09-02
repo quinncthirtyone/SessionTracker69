@@ -64,7 +64,7 @@ function updateMostPlayedChart(gameCount) {
             precision: 0,
             callback: function(value) {
                 // Display ticks as hours
-                return Math.floor(value / 60);
+                return Math.floor(value / 60) + "h";
             }
           }
         },

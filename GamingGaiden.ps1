@@ -1,4 +1,4 @@
-﻿
+
 #Requires -Version 5.1
 
 #_pragma iconFile '.\build\GamingGaiden\icons\running.ico'
@@ -256,10 +256,8 @@ try {
     $mostPlayedMenuItem = CreateMenuItem "Most Played"
     $idleTimeMenuItem = CreateMenuItem "Idle Time"
     $summaryItem = CreateMenuItem "Life Time Summary"
-    $gamesPerPlatformMenuItem = CreateMenuItem "Games Per Platform"
     $null = $statsSubMenuItem.DropDownItems.Add($summaryItem)
     $null = $statsSubMenuItem.DropDownItems.Add($gamingTimeMenuItem)
-    $null = $statsSubMenuItem.DropDownItems.Add($gamesPerPlatformMenuItem)
     $null = $statsSubMenuItem.DropDownItems.Add($mostPlayedMenuItem)
     $null = $statsSubMenuItem.DropDownItems.Add($idleTimeMenuItem)
     $null = $statsSubMenuItem.DropDownItems.Add($sessionHistoryMenuItem)
@@ -332,14 +330,6 @@ try {
             $gameTimeCheckResult = RenderGamingTime
             if ($gameTimeCheckResult -ne $false) {
                 Invoke-Item ".\ui\GamingTime_$profileId.html"
-            }
-        })
-
-    $gamesPerPlatformMenuItem.Add_Click({
-            $profileId = Get-ActiveProfile
-            $gamesPerPlatformCheckResult = RenderGamesPerPlatform
-            if ($gamesPerPlatformCheckResult -ne $false) {
-                Invoke-Item ".\ui\GamesPerPlatform_$profileId.html"
             }
         })
 

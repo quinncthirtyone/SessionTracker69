@@ -1,4 +1,4 @@
-﻿function Log($MSG) {
+function Log($MSG) {
     $mutex = New-Object System.Threading.Mutex($false, "LogFileLock")
 
     if ($mutex.WaitOne(500)) {
@@ -18,6 +18,53 @@ function ToBase64($String) {
 function PlayTimeMinsToString($PlayTime) {
     $minutes = $null; $hours = [math]::divrem($PlayTime, 60, [ref]$minutes);
     return ("{0} Hr {1} Min" -f $hours, $minutes)
+}
+
+function Format-GameName($GameName) {
+    if ([string]::IsNullOrEmpty($GameName)) {
+        return ""
+    }
+
+    $result = [System.Text.StringBuilder]::new()
+    $result.Append($GameName[0]) | Out-Null
+
+    for ($i = 1; $i -lt $GameName.Length; $i++) {
+        $prevChar = $GameName[$i-1]
+        $currChar = $GameName[$i]
+
+        $prevIsLower = [char]::IsLower($prevChar)
+        $prevIsUpper = [char]::IsUpper($prevChar)
+        $prevIsDigit = [char]::IsDigit($prevChar)
+
+        $currIsLower = [char]::IsLower($currChar)
+        $currIsUpper = [char]::IsUpper($currChar)
+        $currIsDigit = [char]::IsDigit($currChar)
+
+        # Look ahead one character to handle acronyms like 'VR' vs 'VRA'
+        $nextChar = if ($i + 1 -lt $GameName.Length) { $GameName[$i+1] } else { $null }
+        $nextIsLower = if ($null -ne $nextChar) { [char]::IsLower($nextChar) } else { $false }
+
+        # Rule 1: Lowercase followed by Uppercase (e.g., "SuperMario")
+        if ($prevIsLower -and $currIsUpper) {
+            $result.Append(" ") | Out-Null
+        }
+        # Rule 2: Uppercase, followed by another Uppercase, followed by a Lowercase (e.g., "theASCIIMystery")
+        elseif ($prevIsUpper -and $currIsUpper -and $nextIsLower) {
+            $result.Append(" ") | Out-Null
+        }
+        # Rule 3: Letter followed by a Digit (e.g., "StreetFighter3")
+        elseif (($prevIsLower -or $prevIsUpper) -and $currIsDigit) {
+            $result.Append(" ") | Out-Null
+        }
+        # Rule 4: Digit followed by a Letter (e.g., "3rdStrike")
+        elseif ($prevIsDigit -and ($currIsLower -or $currIsUpper)) {
+            $result.Append(" ") | Out-Null
+        }
+
+        $result.Append($currChar) | Out-Null
+    }
+
+    return $result.ToString()
 }
 
 function ResizeImage() {
@@ -178,4 +225,61 @@ function CreatePictureBox() {
     $pictureBox.Image = [System.Drawing.Image]::FromFile($ImagePath)
 
     return $pictureBox
+}
+
+function Get-DominantColor {
+    param(
+        [byte[]]$ImageByteArray
+    )
+
+    try {
+        $memStream = New-Object System.IO.MemoryStream(,$ImageByteArray)
+        $bitmap = New-Object System.Drawing.Bitmap($memStream)
+
+        $colorCounts = @{}
+        # Sample ~1000 pixels for performance.
+        $xStep = [Math]::Max(1, [Math]::Floor($bitmap.Width / 32))
+        $yStep = [Math]::Max(1, [Math]::Floor($bitmap.Height / 32))
+
+        for ($y = 0; $y -lt $bitmap.Height; $y += $yStep) {
+            for ($x = 0; $x -lt $bitmap.Width; $x += $xStep) {
+                $pixelColor = $bitmap.GetPixel($x, $y)
+                # Ignore transparent or grayscale pixels to get a more vibrant color
+                if ($pixelColor.A -gt 128 -and ($pixelColor.R -ne $pixelColor.G -or $pixelColor.R -ne $pixelColor.B)) {
+                    # Quantize the color to group similar shades.
+                    $r = $pixelColor.R -band 0xF0
+                    $g = $pixelColor.G -band 0xF0
+                    $b = $pixelColor.B -band 0xF0
+                    $quantizedColor = ($r -shl 16) -bor ($g -shl 8) -bor $b
+
+                    if ($colorCounts.ContainsKey($quantizedColor)) {
+                        $colorCounts[$quantizedColor]++
+                    } else {
+                        $colorCounts[$quantizedColor] = 1
+                    }
+                }
+            }
+        }
+
+        $bitmap.Dispose()
+        $memStream.Dispose()
+
+        if ($colorCounts.Count -eq 0) {
+            # Default color if no suitable color is found
+            return "#808080"
+        }
+
+        $dominantColorEntry = $colorCounts.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 1
+        $dominantColorInt = $dominantColorEntry.Name
+
+        $r = ($dominantColorInt -shr 16) -band 0xFF
+        $g = ($dominantColorInt -shr 8) -band 0xFF
+        $b = $dominantColorInt -band 0xFF
+
+        return ('#{0:X2}{1:X2}{2:X2}' -f $r, $g, $b)
+    }
+    catch {
+        Log "Error finding dominant color: $($_.Exception.Message)"
+        return "#808080" # Return a default grey color on error
+    }
 }

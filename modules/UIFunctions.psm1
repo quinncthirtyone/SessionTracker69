@@ -57,6 +57,17 @@ class Session {
     }
 }
 
+function Get-ProfileSwitcherButton($profileId, $pageName) {
+    $profiles = Get-Profiles
+    $activeProfile = $profiles | Where-Object { $_.id -eq $profileId } | Select-Object -First 1
+    $inactiveProfile = $profiles | Where-Object { $_.id -ne $profileId } | Select-Object -First 1
+
+    $buttonClass = if ($inactiveProfile.id -eq 1) { "profile-button-1" } else { "profile-button-2" }
+    $onClickPath = "$pageName" + "_$($inactiveProfile.id).html"
+    $switcherButton = "<button class='custom-button $buttonClass' onclick=""window.location.href='$onClickPath'"">$($inactiveProfile.name)</button>"
+    return $switcherButton
+}
+
 function UpdateAllStatsInBackground() {
     $profiles = Get-Profiles
     foreach ($profile in $profiles) {
@@ -64,7 +75,6 @@ function UpdateAllStatsInBackground() {
         RenderGameList -InBackground $true
         RenderSummary -InBackground $true
         RenderGamingTime -InBackground $true
-        RenderGamesPerPlatform -InBackground $true
         RenderMostPlayed -InBackground $true
         RenderIdleTime -InBackground $true
         RenderSessionHistory -InBackground $true
@@ -170,8 +180,10 @@ function RenderGameList() {
     $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"
     $report = $report -replace 'AllGames.html', "AllGames_$profileId.html"
     $report = $report -replace 'IdleTime.html', "IdleTime_$profileId.html"
-    $report = $report -replace 'GamesPerPlatform.html', "GamesPerPlatform_$profileId.html"
     $report = $report -replace 'SessionHistory.html', "SessionHistory_$profileId.html"
+
+    $switcherButton = Get-ProfileSwitcherButton $profileId "AllGames"
+    $report = $report -replace '_PROFILE_SWITCHER_', $switcherButton
 
     $report | Out-File -encoding UTF8 "$workingDirectory\ui\AllGames_$profileId.html"
 }
@@ -205,8 +217,10 @@ function RenderGamingTime() {
     $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"
     $report = $report -replace 'AllGames.html', "AllGames_$profileId.html"
     $report = $report -replace 'IdleTime.html', "IdleTime_$profileId.html"
-    $report = $report -replace 'GamesPerPlatform.html', "GamesPerPlatform_$profileId.html"
     $report = $report -replace 'SessionHistory.html', "SessionHistory_$profileId.html"
+
+    $switcherButton = Get-ProfileSwitcherButton $profileId "GamingTime"
+    $report = $report -replace '_PROFILE_SWITCHER_', $switcherButton
 
     $report | Out-File -encoding UTF8 "$workingDirectory\ui\GamingTime_$profileId.html"
 }
@@ -243,8 +257,10 @@ function RenderMostPlayed() {
     $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"
     $report = $report -replace 'AllGames.html', "AllGames_$profileId.html"
     $report = $report -replace 'IdleTime.html', "IdleTime_$profileId.html"
-    $report = $report -replace 'GamesPerPlatform.html', "GamesPerPlatform_$profileId.html"
     $report = $report -replace 'SessionHistory.html', "SessionHistory_$profileId.html"
+
+    $switcherButton = Get-ProfileSwitcherButton $profileId "MostPlayed"
+    $report = $report -replace '_PROFILE_SWITCHER_', $switcherButton
 
     $report | Out-File -encoding UTF8 "$workingDirectory\ui\MostPlayed_$profileId.html"
 }
@@ -366,8 +382,10 @@ function RenderSummary() {
     $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"
     $report = $report -replace 'AllGames.html', "AllGames_$profileId.html"
     $report = $report -replace 'IdleTime.html', "IdleTime_$profileId.html"
-    $report = $report -replace 'GamesPerPlatform.html', "GamesPerPlatform_$profileId.html"
     $report = $report -replace 'SessionHistory.html', "SessionHistory_$profileId.html"
+
+    $switcherButton = Get-ProfileSwitcherButton $profileId "Summary"
+    $report = $report -replace '_PROFILE_SWITCHER_', $switcherButton
 
     $report | Out-File -encoding UTF8 "$workingDirectory\ui\Summary_$profileId.html"
 }
@@ -404,45 +422,12 @@ function RenderIdleTime() {
     $report = $report -replace 'GamingTime.html', "GamingTime_$profileId.html"
     $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"
     $report = $report -replace 'AllGames.html', "AllGames_$profileId.html"
-    $report = $report -replace 'IdleTime.html', "IdleTime_$profileId.html"
-    $report = $report -replace 'GamesPerPlatform.html', "GamesPerPlatform_$profileId.html"
     $report = $report -replace 'SessionHistory.html', "SessionHistory_$profileId.html"
+
+    $switcherButton = Get-ProfileSwitcherButton $profileId "IdleTime"
+    $report = $report -replace '_PROFILE_SWITCHER_', $switcherButton
 
     $report | Out-File -encoding UTF8 "$workingDirectory\ui\IdleTime_$profileId.html"
-}
-
-function RenderGamesPerPlatform() {
-    param(
-        [bool]$InBackground = $false
-    )
-
-    Log "Rendering games per platform"
-
-    $profileId = Get-ActiveProfile
-    $workingDirectory = (Get-Location).Path
-
-    $getGamesPerPlatformDataQuery = "SELECT g.platform, COUNT(g.name) FROM games g JOIN game_stats gs ON g.id = gs.game_id WHERE gs.profile_id = $profileId GROUP BY g.platform"
-    $getGamesPerPlatformData = RunDBQuery $getGamesPerPlatformDataQuery
-    if ($getGamesPerPlatformData.Length -eq 0) {
-        if(-Not $InBackground) {
-            ShowMessage "No Games found in DB for this profile. Please add some games first." "OK" "Error"
-        }
-        Log "Error: Games list empty for profile $profileId. Returning"
-        return $false
-    }
-
-    $table = $getGamesPerPlatformData | ConvertTo-Html -Fragment
-
-    $report = (Get-Content $workingDirectory\ui\templates\GamesPerPlatform.html.template) -replace "_GAMESPERPLATFORMTABLE_", $table
-    $report = $report -replace 'Summary.html', "Summary_$profileId.html"
-    $report = $report -replace 'GamingTime.html', "GamingTime_$profileId.html"
-    $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"
-    $report = $report -replace 'AllGames.html', "AllGames_$profileId.html"
-    $report = $report -replace 'IdleTime.html', "IdleTime_$profileId.html"
-    $report = $report -replace 'GamesPerPlatform.html', "GamesPerPlatform_$profileId.html"
-    $report = $report -replace 'SessionHistory.html', "SessionHistory_$profileId.html"
-
-    $report | Out-File -encoding UTF8 "$workingDirectory\ui\GamesPerPlatform_$profileId.html"
 }
 
 function RenderSessionHistory() {
@@ -517,8 +502,10 @@ function RenderSessionHistory() {
     $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"
     $report = $report -replace 'AllGames.html', "AllGames_$profileId.html"
     $report = $report -replace 'IdleTime.html', "IdleTime_$profileId.html"
-    $report = $report -replace 'GamesPerPlatform.html', "GamesPerPlatform_$profileId.html"
     $report = $report -replace 'SessionHistory.html', "SessionHistory_$profileId.html"
+
+    $switcherButton = Get-ProfileSwitcherButton $profileId "SessionHistory"
+    $report = $report -replace '_PROFILE_SWITCHER_', $switcherButton
 
     $report | Out-File -encoding UTF8 "$workingDirectory\ui\SessionHistory_$profileId.html"
 }

@@ -62,7 +62,6 @@ td:first-child img {
 td:nth-child(2) {
   font-weight: bold;
   width: 35%;
-  text-transform: uppercase;
 }
 
 /* Define specific styles for the Sessions column */

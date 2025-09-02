@@ -1,4 +1,4 @@
-﻿function Get-ActiveProfile {
+function Get-ActiveProfile {
     Log "Getting active profile"
     $getActiveProfileQuery = "SELECT id FROM profiles WHERE is_active = 1"
     $activeProfile = (RunDBQuery $getActiveProfileQuery).id

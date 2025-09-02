@@ -1,4 +1,4 @@
-﻿function DetectGame() {
+function DetectGame() {
     Log "Starting game detection"
 
     # Fetch games in order of most recent to least recent
@@ -180,7 +180,7 @@ function MonitorGame($DetectedExe) {
 
         SaveGame -GameName $gameName -GameExeName $DetectedExe -GameIconPath "./icons/default.png" `
             -GamePlatform $emulatedGameDetails.Platform -GameRomBasedName $gameName -GameIdleDetection $idleDetectionEnabled
-
+            
         UpdateGameOnSession -GameName $gameName -GamePlayTime $currentPlayTime -GameIdleTime $currentIdleTime -GameLastPlayDate $updatedLastPlayDate
     }
 
