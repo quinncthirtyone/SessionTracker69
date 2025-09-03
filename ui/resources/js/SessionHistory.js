@@ -23,14 +23,17 @@ $(document).ready(function() {
         const safeStartTime = DOMPurify.sanitize(session.StartTime);
         const safeEndTime = DOMPurify.sanitize(session.EndTime);
 
-        let actionsCell = '<td><button class="delete-button" data-session-id="${session.Id}">Delete</button>';
+        let actionsCell = '<td>';
+        let hasSwitchButton = false;
         if (profileData.length > 1 && currentProfileId) {
             const otherProfile = profileData.find(p => p.id !== currentProfileId);
             if (otherProfile) {
                 actionsCell += `<button class="switch-profile-button" data-session-id="${session.Id}" data-new-profile-id="${otherProfile.id}">Switch to ${otherProfile.name}</button>`;
+                hasSwitchButton = true;
             }
         }
-        actionsCell += '</td>';
+        const deleteButtonStyle = hasSwitchButton ? 'style="margin-left: 10px;"' : '';
+        actionsCell += `<button class="delete-button" data-session-id="${session.Id}" ${deleteButtonStyle}>Delete</button></td>`;
 
         actionsCell = actionsCell.replace(/\${session.Id}/g, session.Id);
 

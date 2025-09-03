@@ -58,24 +58,28 @@ td {
 }
 
 #sessionHistoryTable td:nth-child(1) {
-  width: 20%;
+  width: 18%;
   text-align: left;
 }
 
 #sessionHistoryTable td:nth-child(2) {
-  width: 20%;
+  width: 18%;
 }
 
 #sessionHistoryTable td:nth-child(3) {
-  width: 20%;
+  width: 18%;
 }
 
 #sessionHistoryTable td:nth-child(4) {
-  width: 20%;
+  width: 18%;
 }
 
 #sessionHistoryTable td:nth-child(5) {
-  width: 20%;
+  width: 18%;
+}
+
+#sessionHistoryTable td:nth-child(6) {
+  width: 10%;
 }
 
 
