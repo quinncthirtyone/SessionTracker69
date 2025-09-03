@@ -128,6 +128,31 @@ function UpdateGameOnSession() {
     }
 }
 
+function Update-SessionDuration {
+    param(
+        [int]$SessionId,
+        [int]$NewDuration
+    )
+
+    Log "Updating session $SessionId duration to $NewDuration minutes"
+
+    # Get the profile_id before updating
+    $profileId = (RunDBQuery "SELECT profile_id FROM session_history WHERE id = $SessionId").profile_id
+
+    if ($null -eq $profileId) {
+        Log "Error: Session with ID $SessionId not found."
+        return $null
+    }
+
+    $updateQuery = "UPDATE session_history SET session_duration_minutes = @NewDuration WHERE id = @SessionId"
+    RunDBQuery $updateQuery @{
+        NewDuration = $NewDuration
+        SessionId   = $SessionId
+    }
+
+    return @($profileId)
+}
+
 function UpdateGameOnEdit() {
     param(
         [string]$OriginalGameName,
