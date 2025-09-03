@@ -221,6 +221,7 @@ try {
     $menuItemSeparator5 = New-Object Windows.Forms.ToolStripSeparator
     $menuItemSeparator6 = New-Object Windows.Forms.ToolStripSeparator
     $menuItemSeparator7 = New-Object Windows.Forms.ToolStripSeparator
+    $menuItemSeparator8 = New-Object Windows.Forms.ToolStripSeparator
 
     $IconRunning = [System.Drawing.Icon]::new(".\icons\running.ico")
     $IconTracking = [System.Drawing.Icon]::new(".\icons\tracking.ico")
@@ -248,6 +249,7 @@ try {
     $editPlatformMenuItem = CreateMenuItem "Edit Emulator"
     $gamingPCMenuItem = CreateMenuItem "Gaming PCs"
     $nameProfilesMenuItem = CreateMenuItem "Name Profiles"
+    $recalculateStatsMenuItem = CreateMenuItem "Recalculate All Statistics"
     $openInstallDirectoryMenuItem = CreateMenuItem "Open Install Directory"
     $null = $settingsSubMenuItem.DropDownItems.Add($addGameMenuItem)
     $null = $settingsSubMenuItem.DropDownItems.Add($editGameMenuItem)
@@ -257,6 +259,8 @@ try {
     $null = $settingsSubMenuItem.DropDownItems.Add($menuItemSeparator7)
     $null = $settingsSubMenuItem.DropDownItems.Add($gamingPCMenuItem)
     $null = $settingsSubMenuItem.DropDownItems.Add($nameProfilesMenuItem)
+    $null = $settingsSubMenuItem.DropDownItems.Add($menuItemSeparator8)
+    $null = $settingsSubMenuItem.DropDownItems.Add($recalculateStatsMenuItem)
     $null = $settingsSubMenuItem.DropDownItems.Add($openInstallDirectoryMenuItem)
 
     $statsSubMenuItem = CreateMenuItem "Statistics"
@@ -446,6 +450,19 @@ try {
     $nameProfilesMenuItem.Add_Click({
         Log "Starting profile naming"
         ExecuteSettingsFunction -SettingsFunctionToCall $function:RenderProfileSettingsForm
+    })
+
+    $recalculateStatsMenuItem.Add_Click({
+        Log "Starting manual recalculation of all statistics."
+        try {
+            [System.Threading.Monitor]::Enter($dbLock)
+            Update-AllStats
+            UpdateAllStatsInBackground
+        }
+        finally {
+            [System.Threading.Monitor]::Exit($dbLock)
+        }
+        $AppNotifyIcon.ShowBalloonTip(3000, "Recalculation Complete", "All game statistics have been successfully recalculated.", [System.Windows.Forms.ToolTipIcon]::Info)
     })
 
     $openInstallDirectoryMenuItem.Add_Click({
