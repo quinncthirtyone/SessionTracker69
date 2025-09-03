@@ -287,6 +287,16 @@ function RemoveGame($GameName) {
     RunDBQuery "DELETE FROM games WHERE id = $gameId"
 }
 
+function Reset-IdleTime {
+    param(
+        [int]$ProfileId
+    )
+
+    Log "Resetting idle time for profile $ProfileId"
+    $resetIdleTimeQuery = "UPDATE game_stats SET idle_time = 0 WHERE profile_id = @ProfileId"
+    RunDBQuery $resetIdleTimeQuery @{ ProfileId = $ProfileId }
+}
+
 function RemovePC($PCName) {
     $PCNamePattern = SQLEscapedMatchPattern($PCName.Trim())
     $removePCQuery = "DELETE FROM gaming_pcs WHERE name LIKE '{0}'" -f $PCNamePattern

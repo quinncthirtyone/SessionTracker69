@@ -250,6 +250,7 @@ try {
     $gamingPCMenuItem = CreateMenuItem "Gaming PCs"
     $nameProfilesMenuItem = CreateMenuItem "Name Profiles"
     $recalculateStatsMenuItem = CreateMenuItem "Recalculate All Statistics"
+    $resetIdleTimeMenuItem = CreateMenuItem "Reset Idle Time"
     $openInstallDirectoryMenuItem = CreateMenuItem "Open Install Directory"
     $null = $settingsSubMenuItem.DropDownItems.Add($addGameMenuItem)
     $null = $settingsSubMenuItem.DropDownItems.Add($editGameMenuItem)
@@ -261,6 +262,7 @@ try {
     $null = $settingsSubMenuItem.DropDownItems.Add($nameProfilesMenuItem)
     $null = $settingsSubMenuItem.DropDownItems.Add($menuItemSeparator8)
     $null = $settingsSubMenuItem.DropDownItems.Add($recalculateStatsMenuItem)
+    $null = $settingsSubMenuItem.DropDownItems.Add($resetIdleTimeMenuItem)
     $null = $settingsSubMenuItem.DropDownItems.Add($openInstallDirectoryMenuItem)
 
     $statsSubMenuItem = CreateMenuItem "Statistics"
@@ -464,6 +466,20 @@ try {
             [System.Threading.Monitor]::Exit($dbLock)
         }
         $AppNotifyIcon.ShowBalloonTip(3000, "Recalculation Complete", "Statistics for the current profile have been successfully recalculated.", [System.Windows.Forms.ToolTipIcon]::Info)
+    })
+
+    $resetIdleTimeMenuItem.Add_Click({
+        Log "Starting manual reset of idle time."
+        try {
+            [System.Threading.Monitor]::Enter($dbLock)
+            $currentProfileId = Get-ActiveProfile
+            Reset-IdleTime -ProfileId $currentProfileId
+            UpdateAllStatsInBackground -ProfileIds $currentProfileId
+        }
+        finally {
+            [System.Threading.Monitor]::Exit($dbLock)
+        }
+        $AppNotifyIcon.ShowBalloonTip(3000, "Idle Time Reset", "Idle time for the current profile has been successfully reset.", [System.Windows.Forms.ToolTipIcon]::Info)
     })
 
     $openInstallDirectoryMenuItem.Add_Click({
