@@ -22,26 +22,34 @@ $(document).ready(function() {
         const safeStartDate = DOMPurify.sanitize(session.StartDate);
         const safeStartTime = DOMPurify.sanitize(session.StartTime);
         const safeEndTime = DOMPurify.sanitize(session.EndTime);
+        const safeType = DOMPurify.sanitize(session.Type);
 
         let actionsCell = '<td>';
-        let hasSwitchButton = false;
-        if (profileData.length > 1 && currentProfileId) {
-            const otherProfile = profileData.find(p => p.id !== currentProfileId);
-            if (otherProfile) {
-                actionsCell += `<button class="switch-profile-button" data-session-id="${session.Id}" data-new-profile-id="${otherProfile.id}">Switch to ${otherProfile.name}</button>`;
-                hasSwitchButton = true;
+        let gameCellClass = '';
+        if (safeType === 'Idle') {
+            gameCellClass = 'idle-session';
+            actionsCell += `<button class="convert-idle-button" data-session-id="${session.Id}">Convert to Active</button>`;
+            actionsCell += `<button class="delete-idle-button" data-session-id="${session.Id}" style="margin-left: 10px;">Delete</button>`;
+        } else { // Active session
+            gameCellClass = 'active-session';
+            let hasSwitchButton = false;
+            if (profileData.length > 1 && currentProfileId) {
+                const otherProfile = profileData.find(p => p.id !== currentProfileId);
+                if (otherProfile) {
+                    actionsCell += `<button class="switch-profile-button" data-session-id="${session.Id}" data-new-profile-id="${otherProfile.id}">Switch to ${otherProfile.name}</button>`;
+                    hasSwitchButton = true;
+                }
             }
+            const deleteButtonStyle = hasSwitchButton ? 'style="margin-left: 10px;"' : '';
+            actionsCell += `<button class="delete-button" data-session-id="${session.Id}" ${deleteButtonStyle}>Delete</button>`;
         }
-        const deleteButtonStyle = hasSwitchButton ? 'style="margin-left: 10px;"' : '';
-        actionsCell += `<button class="delete-button" data-session-id="${session.Id}" ${deleteButtonStyle}>Delete</button></td>`;
-
-        actionsCell = actionsCell.replace(/\${session.Id}/g, session.Id);
+        actionsCell += '</td>';
 
 
         // Create the HTML for the new table row
         const row = `
             <tr>
-                <td>
+                <td class="${gameCellClass}">
                     <div class="game-cell">
                         <img src="${safeIconPath}" class="game-icon" onerror="this.onerror=null;this.src='resources/images/default.png';">
                         <span>${safeGameName}</span>
@@ -88,6 +96,22 @@ $(document).ready(function() {
         const newProfileId = $(this).data('new-profile-id');
         if (confirm(`Are you sure you want to switch this session to the other profile?`)) {
             fetch(`http://localhost:8088/switch-session-profile/${sessionId}/${newProfileId}`)
+                .then(() => location.reload());
+        }
+    });
+
+    $('#sessionHistoryTable').on('click', '.convert-idle-button', function() {
+        const sessionId = $(this).data('session-id');
+        if (confirm('Are you sure you want to convert this idle session to active time?')) {
+            fetch(`http://localhost:8088/convert-idle-session/${sessionId}`)
+                .then(() => location.reload());
+        }
+    });
+
+    $('#sessionHistoryTable').on('click', '.delete-idle-button', function() {
+        const sessionId = $(this).data('session-id');
+        if (confirm('Are you sure you want to delete this idle session?')) {
+            fetch(`http://localhost:8088/delete-idle-session/${sessionId}`)
                 .then(() => location.reload());
         }
     });

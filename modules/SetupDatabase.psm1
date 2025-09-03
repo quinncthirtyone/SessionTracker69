@@ -74,6 +74,15 @@ function SetupDatabase() {
         )"
         Invoke-SqliteQuery -Query $createSessionHistoryTableQuery -SQLiteConnection $dbConnection | Out-Null
 
+        $createIdleSessionsTableQuery = "CREATE TABLE IF NOT EXISTS idle_sessions (
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    game_name TEXT,
+                                    session_start_time INTEGER,
+                                    session_duration_minutes INTEGER,
+                                    profile_id INTEGER NOT NULL
+        )"
+        Invoke-SqliteQuery -Query $createIdleSessionsTableQuery -SQLiteConnection $dbConnection | Out-Null
+
         # Migration for users coming from older versions
         $gamesTableSchema = Invoke-SqliteQuery -query "PRAGMA table_info('games')" -SQLiteConnection $dbConnection
         if ($gamesTableSchema.name.Contains("play_time")) {

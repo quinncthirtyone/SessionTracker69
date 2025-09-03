@@ -211,3 +211,64 @@ function GetPlatformDetails($Platform) {
     Log ("Found details: name: {0}, exe_name: {1}, core: {2}" -f $platformDetails.name, $platformDetails.exe_name, $platformDetails.core)
     return $platformDetails
 }
+
+function Add-IdleSession($GameName, $SessionStartTime, $SessionDuration) {
+    Log "Recording idle session for $GameName"
+    $profileId = Get-ActiveProfile
+    $insertIdleSessionQuery = "INSERT INTO idle_sessions (game_name, session_start_time, session_duration_minutes, profile_id) VALUES ('$GameName', $SessionStartTime, $SessionDuration, $profileId)"
+    RunDBQuery $insertIdleSessionQuery | Out-Null
+}
+
+function Get-IdleSessions {
+    Log "Getting all idle sessions"
+    $profileId = Get-ActiveProfile
+    $getIdleSessionsQuery = "SELECT * FROM idle_sessions WHERE profile_id = $profileId ORDER BY session_start_time DESC"
+    $idleSessions = RunDBQuery $getIdleSessionsQuery
+    return $idleSessions
+}
+
+function Remove-IdleSession($SessionId) {
+    Log "Deleting idle session $SessionId"
+    $deleteIdleSessionQuery = "DELETE FROM idle_sessions WHERE id = $SessionId"
+    RunDBQuery $deleteIdleSessionQuery | Out-Null
+}
+
+function Convert-IdleSessionToActive($SessionId) {
+    Log "Converting idle session $SessionId to active"
+    $profileId = Get-ActiveProfile
+    # 1. Get idle session details
+    $getIdleSessionQuery = "SELECT * FROM idle_sessions WHERE id = $SessionId"
+    $idleSession = RunDBQuery $getIdleSessionQuery
+
+    # 2. Find the most recent active session for that game that occurred *before* the idle session.
+    $getActiveSessionQuery = "SELECT * FROM session_history WHERE game_name = '$($idleSession.game_name)' AND session_start_time < $($idleSession.session_start_time) AND profile_id = $profileId ORDER BY session_start_time DESC LIMIT 1"
+    $activeSession = RunDBQuery $getActiveSessionQuery
+
+    if ($null -ne $activeSession) {
+        # 3. Update the duration of that active session
+        $newDuration = $activeSession.session_duration_minutes + $idleSession.session_duration_minutes
+        $updateActiveSessionQuery = "UPDATE session_history SET session_duration_minutes = $newDuration WHERE id = $($activeSession.id)"
+        RunDBQuery $updateActiveSessionQuery | Out-Null
+
+        # 4. Update play_time and idle_time in game_stats
+        $gameStats = Get-GameStats $idleSession.game_name
+        $newPlayTime = $gameStats.play_time + $idleSession.session_duration_minutes
+        $newIdleTime = $gameStats.idle_time - $idleSession.session_duration_minutes
+        UpdateGameOnSession -GameName $idleSession.game_name -GamePlayTime $newPlayTime -GameIdleTime $newIdleTime -GameLastPlayDate $gameStats.last_play_date
+    } else {
+        # If no preceding active session, create a new one
+        RecordSessionHistory -GameName $idleSession.game_name -SessionStartTime $idleSession.session_start_time -SessionDuration $idleSession.session_duration_minutes
+    }
+
+    # 5. Delete the idle session
+    Remove-IdleSession $SessionId
+}
+
+function Get-GameStats($GameName) {
+    Log "Getting game stats for $GameName"
+    $profileId = Get-ActiveProfile
+    $gameNamePattern = SQLEscapedMatchPattern($GameName.Trim())
+    $getGameStatsQuery = "SELECT gs.* FROM game_stats gs JOIN games g ON gs.game_id = g.id WHERE g.name LIKE '{0}' AND gs.profile_id = {1}" -f $gameNamePattern, $profileId
+    $gameStats = RunDBQuery $getGameStatsQuery
+    return $gameStats
+}

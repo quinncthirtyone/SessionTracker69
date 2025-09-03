@@ -522,6 +522,14 @@ try {
                         $newProfileId = $parts[3]
                         $profileIdsToUpdate = Switch-SessionProfile -SessionId $sessionId -NewProfileId $newProfileId
                     }
+                    elseif ($command -eq "convert-idle-session") {
+                        $sessionId = $parts[2]
+                        Convert-IdleSessionToActive -SessionId $sessionId
+                    }
+                    elseif ($command -eq "delete-idle-session") {
+                        $sessionId = $parts[2]
+                        Remove-IdleSession -SessionId $sessionId
+                    }
 
                     if ($null -ne $profileIdsToUpdate) {
                         UpdateAllStatsInBackground -ProfileIds $profileIdsToUpdate
