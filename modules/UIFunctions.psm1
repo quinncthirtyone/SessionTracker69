@@ -446,7 +446,7 @@ function RenderSessionHistory() {
     $profileId = Get-ActiveProfile
     $workingDirectory = (Get-Location).Path
 
-    $getSessionHistoryQuery = "SELECT sh.game_name, sh.session_start_time, sh.session_duration_minutes, g.icon FROM session_history sh JOIN games g ON sh.game_name = g.name WHERE sh.profile_id = $profileId ORDER BY sh.session_start_time DESC"
+    $getSessionHistoryQuery = "SELECT sh.id, sh.game_name, sh.session_start_time, sh.session_duration_minutes, g.icon FROM session_history sh JOIN games g ON sh.game_name = g.name WHERE sh.profile_id = $profileId ORDER BY sh.session_start_time DESC"
     $sessionRecords = RunDBQuery $getSessionHistoryQuery
 
     $sessionData = [System.Collections.Generic.List[object]]::new()
@@ -487,6 +487,7 @@ function RenderSessionHistory() {
         # --- End Data Formatting ---
 
         $sessionObject = [pscustomobject]@{
+            Id        = $sessionRecord.id
             GameName  = $sessionRecord.game_name
             IconPath  = $pngPath
             Duration  = $durationFormatted
@@ -502,7 +503,10 @@ function RenderSessionHistory() {
         $jsonData = "[]"
     }
 
+    $profiles = Get-Profiles
+    $profilesJson = $profiles | ConvertTo-Json -Depth 2
     $report = (Get-Content $workingDirectory\ui\templates\SessionHistory.html.template) -replace '_SESSIONDATA_', $jsonData
+    $report = $report -replace '_PROFILEDATA_', $profilesJson
     $report = $report -replace 'Summary.html', "Summary_$profileId.html"
     $report = $report -replace 'GamingTime.html', "GamingTime_$profileId.html"
     $report = $report -replace 'MostPlayed.html', "MostPlayed_$profileId.html"

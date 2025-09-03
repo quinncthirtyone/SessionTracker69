@@ -1,9 +1,17 @@
 function Log($MSG) {
-    $mutex = New-Object System.Threading.Mutex($false, "LogFileLock")
-
-    if ($mutex.WaitOne(500)) {
-        Write-Output "$(Get-date -f s) : $MSG" >> ".\GamingGaiden.log"
-        [void]$mutex.ReleaseMutex()
+    # Use a named mutex to ensure thread-safe logging across different processes/threads.
+    $mutex = New-Object System.Threading.Mutex($false, "GamingGaidenGlobalLogMutex")
+    try {
+        # Wait indefinitely for the mutex.
+        $null = $mutex.WaitOne()
+        $timestamp = (Get-date -f s)
+        $logMessage = "$timestamp : $MSG"
+        # Use Add-Content for safer file appending.
+        Add-Content -Path ".\GamingGaiden.log" -Value $logMessage
+    }
+    finally {
+        # Always release the mutex, even if an error occurs.
+        $mutex.ReleaseMutex()
     }
 }
 

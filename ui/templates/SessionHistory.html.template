@@ -24,6 +24,7 @@
             <th>Date</th>
             <th>Start Time</th>
             <th>End Time</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -34,6 +35,7 @@
 
     <script>
       const sessionData = _SESSIONDATA_;
+      const profileData = _PROFILEDATA_;
     </script>
     <script src="./resources/js/SessionHistory.js"></script>
 

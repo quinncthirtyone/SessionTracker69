@@ -66,6 +66,7 @@ function SetupDatabase() {
         Invoke-SqliteQuery -Query $createDailyPlaytimeTableQuery -SQLiteConnection $dbConnection | Out-Null
 
         $createSessionHistoryTableQuery = "CREATE TABLE IF NOT EXISTS session_history (
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                                     game_name TEXT,
                                     session_start_time INTEGER,
                                     session_duration_minutes INTEGER,
@@ -122,6 +123,14 @@ function SetupDatabase() {
         $sessionHistoryTableSchema = Invoke-SqliteQuery -query "PRAGMA table_info('session_history')" -SQLiteConnection $dbConnection
         if (-Not $sessionHistoryTableSchema.name.Contains("profile_id")) {
             Invoke-SqliteQuery -Query "ALTER TABLE session_history ADD COLUMN profile_id INTEGER DEFAULT 1 NOT NULL" -SQLiteConnection $dbConnection | Out-Null
+        }
+
+        $sessionHistoryTableSchema = Invoke-SqliteQuery -query "PRAGMA table_info('session_history')" -SQLiteConnection $dbConnection
+        if (-Not $sessionHistoryTableSchema.name.Contains("id")) {
+            Invoke-SqliteQuery -Query "ALTER TABLE session_history RENAME TO session_history_old" -SQLiteConnection $dbConnection | Out-Null
+            Invoke-SqliteQuery -Query $createSessionHistoryTableQuery -SQLiteConnection $dbConnection | Out-Null
+            Invoke-SqliteQuery -Query "INSERT INTO session_history (game_name, session_start_time, session_duration_minutes, profile_id) SELECT game_name, session_start_time, session_duration_minutes, profile_id FROM session_history_old" -SQLiteConnection $dbConnection | Out-Null
+            Invoke-SqliteQuery -Query "DROP TABLE session_history_old" -SQLiteConnection $dbConnection | Out-Null
         }
 
         $dailyPlaytimeTableSchema = Invoke-SqliteQuery -query "PRAGMA table_info('daily_playtime')" -SQLiteConnection $dbConnection
