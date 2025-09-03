@@ -48,7 +48,7 @@ try {
     }
 
     function  StartTrackerJob() {
-    Start-ThreadJob -InitializationScript $TrackerJobInitializationScript -ScriptBlock $TrackerJobScript -Name "TrackerJob" | Out-Null
+    Start-ThreadJob -InitializationScript $TrackerJobInitializationScript -ScriptBlock $TrackerJobScript -ArgumentList (,$dbLock) -Name "TrackerJob" | Out-Null
         $StopTrackerMenuItem.Enabled = $true
         $StartTrackerMenuItem.Enabled = $false
 
@@ -165,6 +165,10 @@ try {
     }
 
     #------------------------------------------
+    # Database Lock
+    $dbLock = New-Object System.Object
+
+    #------------------------------------------
     # Tracker Job Scripts
     $TrackerJobInitializationScript = {
         Import-Module ".\modules\PSSQLite";
@@ -177,11 +181,18 @@ try {
     }
 
     $TrackerJobScript = {
+        param($dbLock)
         try {
             while ($true) {
                 $detectedExe = DetectGame
-                MonitorGame $detectedExe
-                UpdateAllStatsInBackground
+                try {
+                    [System.Threading.Monitor]::Enter($dbLock)
+                    MonitorGame $detectedExe
+                    UpdateAllStatsInBackground
+                }
+                finally {
+                    [System.Threading.Monitor]::Exit($dbLock)
+                }
             }
         }
         catch {
@@ -326,6 +337,8 @@ try {
     $exitMenuItem.Add_Click({
             $AppNotifyIcon.Visible = $false;
             Stop-Job -Name "TrackerJob" | Out-Null
+            $httpListener.Stop()
+            Stop-Job -Name "HttpListenerJob" | Out-Null
             $Timer.Stop()
             $Timer.Dispose()
             [System.Windows.Forms.Application]::Exit();
@@ -458,6 +471,59 @@ try {
 
     Log "Starting app context"
     $appContext = New-Object System.Windows.Forms.ApplicationContext
+
+    #------------------------------------------
+    # Setup HTTP Listener
+    $httpListener = New-Object System.Net.HttpListener
+    $httpListener.Prefixes.Add("http://localhost:8088/")
+    $httpListener.Start()
+
+    $httpThread = {
+        param($httpListener, $dbLock)
+        while ($httpListener.IsListening) {
+            try {
+                $context = $httpListener.GetContext()
+                $request = $context.Request
+                $response = $context.Response
+                $response.Headers.Add("Access-Control-Allow-Origin", "*")
+
+                try {
+                    [System.Threading.Monitor]::Enter($dbLock)
+                    $url = $request.Url.LocalPath
+                    Log "HTTP Listener: Received request for $url"
+                    $parts = $url.Split("/")
+                    $command = $parts[1]
+
+                    if ($command -eq "remove-session") {
+                        $sessionId = $parts[2]
+                        Remove-Session -SessionId $sessionId
+                    }
+                    elseif ($command -eq "switch-session-profile") {
+                        $sessionId = $parts[2]
+                        $newProfileId = $parts[3]
+                        Switch-SessionProfile -SessionId $sessionId -NewProfileId $newProfileId
+                    }
+
+                    UpdateAllStatsInBackground
+                }
+                finally {
+                    [System.Threading.Monitor]::Exit($dbLock)
+                }
+
+                $response.StatusCode = 200
+                $response.Close()
+            }
+            catch {
+                Log "HTTP Listener: An error occurred: $($_.Exception.Message)"
+                if ($response -ne $null) {
+                    $response.StatusCode = 500
+                    $response.Close()
+                }
+            }
+        }
+    }
+    Start-ThreadJob -InitializationScript $TrackerJobInitializationScript -ScriptBlock $httpThread -ArgumentList ($httpListener, $dbLock) -Name "HttpListenerJob" | Out-Null
+
     [void][System.Windows.Forms.Application]::Run($appContext)
 }
 catch {

@@ -278,6 +278,117 @@ function RemovePlatform($PlatformName) {
     RunDBQuery $removePlatformQuery
 }
 
+function Remove-Session($SessionId) {
+    Log "Removing session $SessionId from database"
+
+    # Get session details
+    $session = RunDBQuery "SELECT * FROM session_history WHERE id = $SessionId"
+    if ($null -eq $session) {
+        Log "Session with ID $SessionId not found."
+        return
+    }
+
+    $gameName = $session.game_name
+    $duration = $session.session_duration_minutes
+    $profileId = $session.profile_id
+    $sessionDate = ([datetime]'1970-01-01 00:00:00Z').AddSeconds($session.session_start_time).ToString("yyyy-MM-dd")
+
+    # Get game ID
+    $gameId = (RunDBQuery "SELECT id FROM games WHERE name LIKE '$gameName'").id
+
+    # Update game_stats
+    $gameStats = RunDBQuery "SELECT * FROM game_stats WHERE game_id = $gameId AND profile_id = $profileId"
+    if ($null -ne $gameStats) {
+        $newPlayTime = $gameStats.play_time - $duration
+        $newSessionCount = $gameStats.session_count - 1
+        RunDBQuery "UPDATE game_stats SET play_time = $newPlayTime, session_count = $newSessionCount WHERE id = $($gameStats.id)"
+    }
+
+    # Update daily_playtime
+    $dailyPlaytime = RunDBQuery "SELECT * FROM daily_playtime WHERE play_date = '$sessionDate' AND profile_id = $profileId"
+    if ($null -ne $dailyPlaytime) {
+        $newDailyPlayTime = $dailyPlaytime.play_time - $duration
+        if ($newDailyPlayTime -le 0) {
+            RunDBQuery "DELETE FROM daily_playtime WHERE play_date = '$sessionDate' AND profile_id = $profileId"
+        }
+        else {
+            RunDBQuery "UPDATE daily_playtime SET play_time = $newDailyPlayTime WHERE play_date = '$sessionDate' AND profile_id = $profileId"
+        }
+    }
+
+    # Delete session
+    RunDBQuery "DELETE FROM session_history WHERE id = $SessionId"
+}
+
+function Switch-SessionProfile($SessionId, $NewProfileId) {
+    Log "Switching session $SessionId to profile $NewProfileId"
+
+    # Get session details
+    $session = RunDBQuery "SELECT * FROM session_history WHERE id = $SessionId"
+    if ($null -eq $session) {
+        Log "Session with ID $SessionId not found."
+        return
+    }
+
+    $gameName = $session.game_name
+    $duration = $session.session_duration_minutes
+    $oldProfileId = $session.profile_id
+    $sessionDate = ([datetime]'1970-01-01 00:00:00Z').AddSeconds($session.session_start_time).ToString("yyyy-MM-dd")
+
+    if ($oldProfileId -eq $NewProfileId) {
+        Log "Session is already on this profile."
+        return
+    }
+
+    # Get game ID
+    $gameId = (RunDBQuery "SELECT id FROM games WHERE name LIKE '$gameName'").id
+
+    # Update game_stats for old profile
+    $oldGameStats = RunDBQuery "SELECT * FROM game_stats WHERE game_id = $gameId AND profile_id = $oldProfileId"
+    if ($null -ne $oldGameStats) {
+        $newPlayTime = $oldGameStats.play_time - $duration
+        $newSessionCount = $oldGameStats.session_count - 1
+        RunDBQuery "UPDATE game_stats SET play_time = $newPlayTime, session_count = $newSessionCount WHERE id = $($oldGameStats.id)"
+    }
+
+    # Update game_stats for new profile
+    $newGameStats = RunDBQuery "SELECT * FROM game_stats WHERE game_id = $gameId AND profile_id = $NewProfileId"
+    if ($null -ne $newGameStats) {
+        $newPlayTime = $newGameStats.play_time + $duration
+        $newSessionCount = $newGameStats.session_count + 1
+        RunDBQuery "UPDATE game_stats SET play_time = $newPlayTime, session_count = $newSessionCount WHERE id = $($newGameStats.id)"
+    }
+    else {
+        # If the game doesn't have stats for the new profile, create them
+        RunDBQuery "INSERT INTO game_stats (game_id, profile_id, play_time, last_play_date, completed, status, session_count, idle_time) VALUES ($gameId, $NewProfileId, $duration, $($session.session_start_time), 'FALSE', 'Playing', 1, 0)"
+    }
+
+    # Update daily_playtime for old profile
+    $oldDailyPlaytime = RunDBQuery "SELECT * FROM daily_playtime WHERE play_date = '$sessionDate' AND profile_id = $oldProfileId"
+    if ($null -ne $oldDailyPlaytime) {
+        $newDailyPlayTime = $oldDailyPlaytime.play_time - $duration
+        if ($newDailyPlayTime -le 0) {
+            RunDBQuery "DELETE FROM daily_playtime WHERE play_date = '$sessionDate' AND profile_id = $oldProfileId"
+        }
+        else {
+            RunDBQuery "UPDATE daily_playtime SET play_time = $newDailyPlayTime WHERE play_date = '$sessionDate' AND profile_id = $oldProfileId"
+        }
+    }
+
+    # Update daily_playtime for new profile
+    $newDailyPlaytime = RunDBQuery "SELECT * FROM daily_playtime WHERE play_date = '$sessionDate' AND profile_id = $NewProfileId"
+    if ($null -ne $newDailyPlaytime) {
+        $newDailyPlayTime = $newDailyPlaytime.play_time + $duration
+        RunDBQuery "UPDATE daily_playtime SET play_time = $newDailyPlayTime WHERE play_date = '$sessionDate' AND profile_id = $NewProfileId"
+    }
+    else {
+        RunDBQuery "INSERT INTO daily_playtime (play_date, play_time, profile_id) VALUES ('$sessionDate', $duration, $NewProfileId)"
+    }
+
+    # Update session
+    RunDBQuery "UPDATE session_history SET profile_id = $NewProfileId WHERE id = $SessionId"
+}
+
 function RecordPlaytimOnDate($PlayTime) {
     $profileId = Get-ActiveProfile
     $existingPlayTimeQuery = "SELECT play_time FROM daily_playtime WHERE play_date like DATE('now') AND profile_id = {0}" -f $profileId

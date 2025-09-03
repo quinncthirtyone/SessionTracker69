@@ -9,6 +9,10 @@ $(document).ready(function() {
         return;
     }
 
+    const url = window.location.pathname;
+    const match = url.match(/_(\d+)\.html$/);
+    const currentProfileId = match ? parseInt(match[1], 10) : null;
+
     // Loop through each session record passed from the PowerShell script
     sessionData.forEach(session => {
         // Sanitize data before inserting it into the DOM to prevent XSS attacks
@@ -18,6 +22,18 @@ $(document).ready(function() {
         const safeStartDate = DOMPurify.sanitize(session.StartDate);
         const safeStartTime = DOMPurify.sanitize(session.StartTime);
         const safeEndTime = DOMPurify.sanitize(session.EndTime);
+
+        let actionsCell = '<td><button class="delete-button" data-session-id="${session.Id}">Delete</button>';
+        if (profileData.length > 1 && currentProfileId) {
+            const otherProfile = profileData.find(p => p.id !== currentProfileId);
+            if (otherProfile) {
+                actionsCell += `<button class="switch-profile-button" data-session-id="${session.Id}" data-new-profile-id="${otherProfile.id}">Switch to ${otherProfile.name}</button>`;
+            }
+        }
+        actionsCell += '</td>';
+
+        actionsCell = actionsCell.replace(/\${session.Id}/g, session.Id);
+
 
         // Create the HTML for the new table row
         const row = `
@@ -32,6 +48,7 @@ $(document).ready(function() {
                 <td>${safeStartDate}</td>
                 <td>${safeStartTime}</td>
                 <td>${safeEndTime}</td>
+                ${actionsCell}
             </tr>
         `;
         // Append the new row to the table body
@@ -50,7 +67,25 @@ $(document).ready(function() {
             { "targets": 1, "orderable": false, "searchable": false }, // Duration
             { "targets": 2, "orderable": true, "searchable": true }, // Date
             { "targets": 3, "orderable": true, "searchable": false },  // Start Time
-            { "targets": 4, "orderable": true, "searchable": false }  // End Time
+            { "targets": 4, "orderable": true, "searchable": false },  // End Time
+            { "targets": 5, "orderable": false, "searchable": false } // Actions
         ]
+    });
+
+    $('#sessionHistoryTable').on('click', '.delete-button', function() {
+        const sessionId = $(this).data('session-id');
+        if (confirm('Are you sure you want to delete this session?')) {
+            fetch(`http://localhost:8088/remove-session/${sessionId}`)
+                .then(() => location.reload());
+        }
+    });
+
+    $('#sessionHistoryTable').on('click', '.switch-profile-button', function() {
+        const sessionId = $(this).data('session-id');
+        const newProfileId = $(this).data('new-profile-id');
+        if (confirm(`Are you sure you want to switch this session to the other profile?`)) {
+            fetch(`http://localhost:8088/switch-session-profile/${sessionId}/${newProfileId}`)
+                .then(() => location.reload());
+        }
     });
 });
