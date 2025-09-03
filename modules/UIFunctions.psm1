@@ -69,8 +69,30 @@ function Get-ProfileSwitcherButton($profileId, $pageName) {
 }
 
 function UpdateAllStatsInBackground() {
-    $profiles = Get-Profiles
-    foreach ($profile in $profiles) {
+    param(
+        [int[]]$ProfileIds
+    )
+
+    $originalActiveProfile = Get-ActiveProfile
+
+    $profilesToProcess = $null
+    if ($null -ne $ProfileIds) {
+        $profileIdList = $ProfileIds -join ','
+        $profilesToProcess = RunDBQuery "SELECT * FROM profiles WHERE id IN ($profileIdList)"
+        Log "Rendering reports for specific profiles: $profileIdList"
+    }
+    else {
+        $profilesToProcess = Get-Profiles
+        Log "Rendering reports for all profiles."
+    }
+
+    if ($null -eq $profilesToProcess) {
+        Log "No profiles found to render reports for."
+        Set-ActiveProfile $originalActiveProfile # Restore original profile
+        return
+    }
+
+    foreach ($profile in $profilesToProcess) {
         Set-ActiveProfile $profile.id
         RenderGameList -InBackground $true
         RenderSummary -InBackground $true
@@ -79,6 +101,8 @@ function UpdateAllStatsInBackground() {
         RenderIdleTime -InBackground $true
         RenderSessionHistory -InBackground $true
     }
+
+    Set-ActiveProfile $originalActiveProfile
 }
 
 function RenderGameList() {
