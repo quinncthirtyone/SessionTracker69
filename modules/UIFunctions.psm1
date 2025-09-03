@@ -428,23 +428,23 @@ function RenderIdleTime() {
     $gamesIdleTimeData = @(RunDBQuery $getGamesIdleTimeDataQuery)
     if ($gamesIdleTimeData.Length -eq 0) {
         if(-Not $InBackground) {
-            ShowMessage "No Idle Games found in DB for this profile." "OK" "Error"
         }
-        Log "Error: Idle Games list empty for profile $profileId. Returning"
-        return $false
+        Log "Info: Idle Games list empty for profile $profileId. Generating empty report."
+        $jsonData = "[]"
     }
+    else {
+        $getTotalIdleTimeQuery = "SELECT SUM(idle_time) as total_idle_time FROM game_stats WHERE profile_id = $profileId"
+        $totalIdleTime = (RunDBQuery $getTotalIdleTimeQuery).total_idle_time
+        $totalIdleTimeInHours = [math]::Round($totalIdleTime / 60.0, 2)
+        $totalIdleTimeObject = [pscustomobject]@{
+            name      = "AFK Total"
+            time      = $totalIdleTimeInHours
+            color_hex = '#ff6384'
+        }
+        $gamesIdleTimeData += $totalIdleTimeObject
 
-    $getTotalIdleTimeQuery = "SELECT SUM(idle_time) as total_idle_time FROM game_stats WHERE profile_id = $profileId"
-    $totalIdleTime = (RunDBQuery $getTotalIdleTimeQuery).total_idle_time
-    $totalIdleTimeInHours = [math]::Round($totalIdleTime / 60.0, 2)
-    $totalIdleTimeObject = [pscustomobject]@{
-        name      = "AFK Total"
-        time      = $totalIdleTimeInHours
-        color_hex = '#ff6384'
+        $jsonData = $gamesIdleTimeData | ConvertTo-Json -Depth 5 -Compress
     }
-    $gamesIdleTimeData += $totalIdleTimeObject
-
-    $jsonData = $gamesIdleTimeData | ConvertTo-Json -Depth 5 -Compress
 
     $report = (Get-Content $workingDirectory\ui\templates\IdleTime.html.template) -replace "_GAMINGDATA_", $jsonData
     $report = $report -replace 'Summary.html', "Summary_$profileId.html"
