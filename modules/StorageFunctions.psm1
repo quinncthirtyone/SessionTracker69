@@ -285,7 +285,7 @@ function Remove-Session($SessionId) {
     $session = RunDBQuery "SELECT * FROM session_history WHERE id = $SessionId"
     if ($null -eq $session) {
         Log "Session with ID $SessionId not found."
-        return
+        return $null
     }
 
     $gameName = $session.game_name
@@ -318,6 +318,7 @@ function Remove-Session($SessionId) {
 
     # Delete session
     RunDBQuery "DELETE FROM session_history WHERE id = $SessionId"
+    return $profileId
 }
 
 function Switch-SessionProfile($SessionId, $NewProfileId) {
@@ -327,7 +328,7 @@ function Switch-SessionProfile($SessionId, $NewProfileId) {
     $session = RunDBQuery "SELECT * FROM session_history WHERE id = $SessionId"
     if ($null -eq $session) {
         Log "Session with ID $SessionId not found."
-        return
+        return $null
     }
 
     $gameName = $session.game_name
@@ -336,7 +337,7 @@ function Switch-SessionProfile($SessionId, $NewProfileId) {
 
     if ($oldProfileId -eq $NewProfileId) {
         Log "Session is already on this profile."
-        return
+        return $null
     }
 
     # Get game ID
@@ -415,6 +416,7 @@ function Switch-SessionProfile($SessionId, $NewProfileId) {
             }
         }
     }
+    return @($oldProfileId, $NewProfileId)
 }
 
 function RecordPlaytimOnDate($PlayTime) {
@@ -459,15 +461,44 @@ function RecordSessionHistory() {
 }
 
 function Update-AllStats() {
+    param(
+        [int[]]$ProfileIds
+    )
     Log "Starting full recalculation of all statistics."
+
+    $profilesToProcess = $null
+    if ($null -ne $ProfileIds) {
+        $profileIdList = $ProfileIds -join ','
+        $profilesToProcess = RunDBQuery "SELECT * FROM profiles WHERE id IN ($profileIdList)"
+        Log "Recalculating stats for specific profiles: $profileIdList"
+    }
+    else {
+        $profilesToProcess = Get-Profiles
+        Log "Recalculating stats for all profiles."
+    }
+
+    if ($null -eq $profilesToProcess) {
+        Log "No profiles found to process. Aborting recalculation."
+        return
+    }
 
     # 1. Recalculate daily_playtime from session_history
     Log "Calculating daily playtime from session_history."
-    $getDailyPlaytimeQuery = "SELECT strftime('%Y-%m-%d', session_start_time, 'unixepoch', 'localtime') as play_date, SUM(session_duration_minutes) as play_time, profile_id FROM session_history GROUP BY play_date, profile_id"
+    $getDailyPlaytimeQuery = "SELECT strftime('%Y-%m-%d', session_start_time, 'unixepoch', 'localtime') as play_date, SUM(session_duration_minutes) as play_time, profile_id FROM session_history"
+    if ($null -ne $ProfileIds) {
+        $profileIdList = $ProfileIds -join ','
+        $getDailyPlaytimeQuery += " WHERE profile_id IN ($profileIdList)"
+    }
+    $getDailyPlaytimeQuery += " GROUP BY play_date, profile_id"
     $dailyPlaytimeData = RunDBQuery $getDailyPlaytimeQuery
     
-    Log "Clearing daily_playtime table."
-    RunDBQuery "DELETE FROM daily_playtime"
+    Log "Clearing daily_playtime table for affected profiles."
+    $deleteDailyPlaytimeQuery = "DELETE FROM daily_playtime"
+    if ($null -ne $ProfileIds) {
+        $profileIdList = $ProfileIds -join ','
+        $deleteDailyPlaytimeQuery += " WHERE profile_id IN ($profileIdList)"
+    }
+    RunDBQuery $deleteDailyPlaytimeQuery
 
     Log "Repopulating daily_playtime with calculated data."
     if ($null -ne $dailyPlaytimeData) {
@@ -485,10 +516,9 @@ function Update-AllStats() {
     # 2. Recalculate all game_stats
     Log "Recalculating all game_stats."
     $games = RunDBQuery "SELECT id, name FROM games"
-    $profiles = Get-Profiles
 
     foreach ($game in $games) {
-        foreach ($profile in $profiles) {
+        foreach ($profile in $profilesToProcess) {
             $gameId = $game.id
             $gameName = $game.name
             $profileId = $profile.id

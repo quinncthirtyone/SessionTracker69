@@ -188,7 +188,7 @@ try {
                 try {
                     [System.Threading.Monitor]::Enter($dbLock)
                     MonitorGame $detectedExe
-                    UpdateAllStatsInBackground
+                    UpdateAllStatsInBackground -ProfileIds (Get-ActiveProfile)
                 }
                 finally {
                     [System.Threading.Monitor]::Exit($dbLock)
@@ -456,13 +456,14 @@ try {
         Log "Starting manual recalculation of all statistics."
         try {
             [System.Threading.Monitor]::Enter($dbLock)
-            Update-AllStats
-            UpdateAllStatsInBackground
+            $currentProfileId = Get-ActiveProfile
+            Update-AllStats -ProfileIds $currentProfileId
+            UpdateAllStatsInBackground -ProfileIds $currentProfileId
         }
         finally {
             [System.Threading.Monitor]::Exit($dbLock)
         }
-        $AppNotifyIcon.ShowBalloonTip(3000, "Recalculation Complete", "All game statistics have been successfully recalculated.", [System.Windows.Forms.ToolTipIcon]::Info)
+        $AppNotifyIcon.ShowBalloonTip(3000, "Recalculation Complete", "Statistics for the current profile have been successfully recalculated.", [System.Windows.Forms.ToolTipIcon]::Info)
     })
 
     $openInstallDirectoryMenuItem.Add_Click({
@@ -511,17 +512,23 @@ try {
                     $parts = $url.Split("/")
                     $command = $parts[1]
 
+                    $profileIdsToUpdate = $null
                     if ($command -eq "remove-session") {
                         $sessionId = $parts[2]
-                        Remove-Session -SessionId $sessionId
+                        $profileIdsToUpdate = Remove-Session -SessionId $sessionId
                     }
                     elseif ($command -eq "switch-session-profile") {
                         $sessionId = $parts[2]
                         $newProfileId = $parts[3]
-                        Switch-SessionProfile -SessionId $sessionId -NewProfileId $newProfileId
+                        $profileIdsToUpdate = Switch-SessionProfile -SessionId $sessionId -NewProfileId $newProfileId
                     }
 
-                    UpdateAllStatsInBackground
+                    if ($null -ne $profileIdsToUpdate) {
+                        UpdateAllStatsInBackground -ProfileIds $profileIdsToUpdate
+                    }
+                    else {
+                        UpdateAllStatsInBackground
+                    }
                 }
                 finally {
                     [System.Threading.Monitor]::Exit($dbLock)
