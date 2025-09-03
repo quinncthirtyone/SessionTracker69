@@ -470,16 +470,27 @@ function RenderSessionHistory() {
     $profileId = Get-ActiveProfile
     $workingDirectory = (Get-Location).Path
 
-    $getSessionHistoryQuery = "SELECT sh.id, sh.game_name, sh.session_start_time, sh.session_duration_minutes, g.icon FROM session_history sh JOIN games g ON sh.game_name = g.name WHERE sh.profile_id = $profileId ORDER BY sh.session_start_time DESC"
-    $sessionRecords = RunDBQuery $getSessionHistoryQuery
+    # Get active sessions
+    $getSessionHistoryQuery = "SELECT sh.id, sh.game_name, sh.session_start_time, sh.session_duration_minutes, g.icon, 'Active' as type FROM session_history sh JOIN games g ON sh.game_name = g.name WHERE sh.profile_id = $profileId"
+    $activeSessions = RunDBQuery $getSessionHistoryQuery
+
+    # Get idle sessions
+    $getIdleSessionsQuery = "SELECT id, game_name, session_start_time, session_duration_minutes, 'Idle' as type FROM idle_sessions WHERE profile_id = $profileId"
+    $idleSessions = RunDBQuery $getIdleSessionsQuery
+
+    # Combine and sort sessions
+    $allSessions = $activeSessions + $idleSessions
+    $allSessions = $allSessions | Sort-Object -Property session_start_time -Descending
 
     $sessionData = [System.Collections.Generic.List[object]]::new()
 
-    foreach ($sessionRecord in $sessionRecords) {
+    foreach ($sessionRecord in $allSessions) {
         # --- Robust Icon Path Generation ---
-        $imageFileName = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($sessionRecord.game_name))
+        $gameName = $sessionRecord.game_name
+        $imageFileName = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($gameName))
         $pngPath = "$workingDirectory\ui\resources\images\$imageFileName.png"
         $jpgPath = "$workingDirectory\ui\resources\images\$imageFileName.jpg"
+        $iconPath = ".\resources\images\$imageFileName.png"
 
         if (-Not (Test-Path $pngPath)) {
             if (Test-Path $jpgPath) {
@@ -489,10 +500,13 @@ function RenderSessionHistory() {
                 Remove-Item $jpgPath
             }
             else {
-                $iconByteStream = [System.IO.MemoryStream]::new($sessionRecord.icon)
-                $image = [System.Drawing.Image]::FromStream($iconByteStream)
-                $image.Save($pngPath, [System.Drawing.Imaging.ImageFormat]::Png)
-                $image.Dispose()
+                $icon = (RunDBQuery "SELECT icon FROM games WHERE name LIKE '$gameName'").icon
+                if ($null -ne $icon) {
+                    $iconByteStream = [System.IO.MemoryStream]::new($icon)
+                    $image = [System.Drawing.Image]::FromStream($iconByteStream)
+                    $image.Save($pngPath, [System.Drawing.Imaging.ImageFormat]::Png)
+                    $image.Dispose()
+                }
             }
         }
         # --- End Icon Logic ---
@@ -512,12 +526,13 @@ function RenderSessionHistory() {
 
         $sessionObject = [pscustomobject]@{
             Id        = $sessionRecord.id
-            GameName  = $sessionRecord.game_name
-            IconPath  = $pngPath
+            GameName  = $gameName
+            IconPath  = $iconPath
             Duration  = $durationFormatted
             StartDate = $startDateFormatted
             StartTime = $startTimeFormatted
             EndTime   = $endTimeFormatted
+            Type      = $sessionRecord.type
         }
         $null = $sessionData.Add($sessionObject)
     }

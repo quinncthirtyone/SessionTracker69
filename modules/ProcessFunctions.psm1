@@ -68,11 +68,10 @@ function DetectGame() {
     }
 }
 
-function TimeTrackerLoop($DetectedExe, $IdleDetectionEnabled) {
+function TimeTrackerLoop($DetectedExe, $IdleDetectionEnabled, $GameName) {
     $hwInfoSensorSession = 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden\Other1'
     $playTimeForCurrentSession = 0
-    $idleSessionsCount = 0
-    $idleSessions = New-Object int[] 100;
+    $totalIdleTimeForCurrentSession = 0
     $exeStartTime = ($null = [System.Diagnostics.Process]::GetProcessesByName($DetectedExe)).StartTime | Sort-Object | Select-Object -First 1
 
     while ($null = [System.Diagnostics.Process]::GetProcessesByName($DetectedExe)) {
@@ -82,10 +81,13 @@ function TimeTrackerLoop($DetectedExe, $IdleDetectionEnabled) {
             $idleTime = [int16] ([PInvoke.Win32.UserInput]::IdleTime).Minutes
 
             if ($idleTime -ge 10) {
+                $idleSessionStartTime = (Get-Date).AddMinutes(-$idleTime)
+                $idleSessionStartTimeUnix = (Get-Date $idleSessionStartTime -UFormat %s).Split('.')[0]
+                $idleSessionDuration = 0
                 # Entered idle Session
                 while ($idleTime -ge 5) {
                     # Track idle Time for current Idle Session
-                    $idleSessions[$idleSessionsCount] = $idleTime
+                    $idleSessionDuration = $idleTime
                     $idleTime = [int16] ([PInvoke.Win32.UserInput]::IdleTime).Minutes
 
                     # Keep the hwinfo sensor updated to current play time session length while tracking idle session
@@ -94,8 +96,9 @@ function TimeTrackerLoop($DetectedExe, $IdleDetectionEnabled) {
 
                     Start-Sleep -s 5
                 }
-                # Exited Idle Session, increment idle session counter for storing next idle sessions's length
-                $idleSessionsCount++
+                # Exited Idle Session, record it
+                Add-IdleSession -GameName $GameName -SessionStartTime $idleSessionStartTimeUnix -SessionDuration $idleSessionDuration
+                $totalIdleTimeForCurrentSession += $idleSessionDuration
             }
         }
 
@@ -103,13 +106,12 @@ function TimeTrackerLoop($DetectedExe, $IdleDetectionEnabled) {
         Start-Sleep -s 5
     }
 
-    $idleTimeForCurrentSession = ($idleSessions | Measure-Object -Sum).Sum
-    Log "Play time for current session: $playTimeForCurrentSession min. Idle time for current session: $idleTimeForCurrentSession min."
+    Log "Play time for current session: $playTimeForCurrentSession min. Idle time for current session: $totalIdleTimeForCurrentSession min."
 
-    $PlayTimeExcludingIdleTime = $playTimeForCurrentSession - $idleTimeForCurrentSession
+    $PlayTimeExcludingIdleTime = $playTimeForCurrentSession - $totalIdleTimeForCurrentSession
     Log "Play time for current session excluding Idle time $PlayTimeExcludingIdleTime min"
 
-    return @($PlayTimeExcludingIdleTime, $idleTimeForCurrentSession, $exeStartTime)
+    return @($PlayTimeExcludingIdleTime, $totalIdleTimeForCurrentSession, $exeStartTime)
 }
 
 function MonitorGame($DetectedExe) {
@@ -131,7 +133,7 @@ function MonitorGame($DetectedExe) {
             Log "Error: Problem in fetching emulated game details. See earlier logs for more info"
             Log "Error: Cannot resume detection until $DetectedExe exits. No playtime will be recorded."
 
-            TimeTrackerLoop $DetectedExe -IdleDetectionEnabled $true
+            TimeTrackerLoop $DetectedExe -IdleDetectionEnabled $true -GameName "Unknown"
             return
         }
 

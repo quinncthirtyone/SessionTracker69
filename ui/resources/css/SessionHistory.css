@@ -169,3 +169,11 @@ td {
     box-shadow: #d6d6e7 0 3px 7px inset;
     transform: translateY(2px);
   }
+
+.active-session {
+    background-color: rgba(0, 0, 255, 0.1) !important;
+}
+
+.idle-session {
+    background-color: rgba(255, 99, 132, 0.2) !important;
+}
