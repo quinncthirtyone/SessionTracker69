@@ -4,6 +4,7 @@ body {
   background-color: white;
   display: flex;
   flex-direction: column;
+  padding-bottom: 75px;
 }
 
 table {
@@ -104,9 +105,17 @@ td {
 }
 
 #navigation-bar {
-    display: flex;
-    margin-top: 1.5%;
-    justify-content: space-evenly;
+  display: flex;
+  justify-content: space-evenly;
+  background-color: #f0f0f0;
+  padding: 15px 0;
+  border-top: 1px solid #dcdcdc;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
 }
 
 #navigation-bar button:first-child {

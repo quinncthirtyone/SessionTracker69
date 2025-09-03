@@ -6,6 +6,7 @@ body {
   font-family: monospace;
   background-color: white;
   height: 98.5vh;
+  padding-bottom: 75px;
 }
 
 #chart-container {
@@ -25,8 +26,16 @@ body {
 
 #navigation-bar {
   display: flex;
-  width: 100%;
   justify-content: space-evenly;
+  background-color: #f0f0f0;
+  padding: 15px 0;
+  border-top: 1px solid #dcdcdc;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
 }
 
 #navigation-bar button:first-child {
