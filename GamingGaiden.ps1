@@ -503,7 +503,18 @@ try {
                 $context = $httpListener.GetContext()
                 $request = $context.Request
                 $response = $context.Response
+
+                # Add CORS headers for all responses
                 $response.Headers.Add("Access-Control-Allow-Origin", "*")
+                $response.Headers.Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+                $response.Headers.Add("Access-Control-Allow-Headers", "Content-Type")
+
+                # Handle preflight OPTIONS request
+                if ($request.HttpMethod -eq "OPTIONS") {
+                    $response.StatusCode = 204 # No Content
+                    $response.Close()
+                    continue # Use continue to proceed to the next iteration of the while loop
+                }
 
                 try {
                     [System.Threading.Monitor]::Enter($dbLock)
@@ -512,30 +523,37 @@ try {
                     $parts = $url.Split("/")
                     $command = $parts[1]
 
-                    $profileIdsToUpdate = $null
                     if ($command -eq "remove-session") {
                         $sessionId = $parts[2]
                         $profileIdsToUpdate = Remove-Session -SessionId $sessionId
+                        UpdateAllStatsInBackground -ProfileIds $profileIdsToUpdate
                     }
                     elseif ($command -eq "switch-session-profile") {
                         $sessionId = $parts[2]
                         $newProfileId = $parts[3]
                         $profileIdsToUpdate = Switch-SessionProfile -SessionId $sessionId -NewProfileId $newProfileId
+                        UpdateAllStatsInBackground -ProfileIds $profileIdsToUpdate
                     }
                     elseif ($command -eq "convert-idle-session") {
                         $sessionId = $parts[2]
                         Convert-IdleSessionToActive -SessionId $sessionId
+                        UpdateAllStatsInBackground
                     }
                     elseif ($command -eq "delete-idle-session") {
                         $sessionId = $parts[2]
                         Remove-IdleSession -SessionId $sessionId
-                    }
-
-                    if ($null -ne $profileIdsToUpdate) {
-                        UpdateAllStatsInBackground -ProfileIds $profileIdsToUpdate
-                    }
-                    else {
                         UpdateAllStatsInBackground
+                    }
+                    elseif ($command -eq "update-session-duration") {
+                        $requestBody = (New-Object System.IO.StreamReader($request.InputStream)).ReadToEnd()
+                        $requestData = ConvertFrom-Json $requestBody
+                        $sessionId = $requestData.sessionId
+                        $newDuration = $requestData.newDuration
+                        $profileIdsToUpdate = Update-SessionDuration -SessionId $sessionId -NewDuration $newDuration
+
+                        if ($null -ne $profileIdsToUpdate) {
+                            Update-AllStats -ProfileIds $profileIdsToUpdate
+                        }
                     }
                 }
                 finally {

@@ -25,30 +25,29 @@ $(document).ready(function() {
         const safeType = DOMPurify.sanitize(session.Type);
 
         let actionsCell = '<td>';
+        actionsCell += `<button class="edit-button" data-session-id="${session.Id}">Edit</button>`;
+
         let gameCellClass = '';
         if (safeType === 'Idle') {
             gameCellClass = 'idle-session';
             actionsCell += `<button class="convert-idle-button" data-session-id="${session.Id}">Convert to Active</button>`;
-            actionsCell += `<button class="delete-idle-button" data-session-id="${session.Id}" style="margin-left: 10px;">Delete</button>`;
+            actionsCell += `<button class="delete-idle-button" data-session-id="${session.Id}">Delete</button>`;
         } else { // Active session
             gameCellClass = 'active-session';
-            let hasSwitchButton = false;
             if (profileData.length > 1 && currentProfileId) {
                 const otherProfile = profileData.find(p => p.id !== currentProfileId);
                 if (otherProfile) {
                     actionsCell += `<button class="switch-profile-button" data-session-id="${session.Id}" data-new-profile-id="${otherProfile.id}">Switch to ${otherProfile.name}</button>`;
-                    hasSwitchButton = true;
                 }
             }
-            const deleteButtonStyle = hasSwitchButton ? 'style="margin-left: 10px;"' : '';
-            actionsCell += `<button class="delete-button" data-session-id="${session.Id}" ${deleteButtonStyle}>Delete</button>`;
+            actionsCell += `<button class="delete-button" data-session-id="${session.Id}">Delete</button>`;
         }
         actionsCell += '</td>';
 
 
         // Create the HTML for the new table row
         const row = `
-            <tr>
+            <tr data-session-id="${session.Id}">
                 <td class="${gameCellClass}">
                     <div class="game-cell">
                         <img src="${safeIconPath}" class="game-icon" onerror="this.onerror=null;this.src='resources/images/default.png';">
@@ -81,6 +80,81 @@ $(document).ready(function() {
             { "targets": 4, "orderable": true, "searchable": false },  // End Time
             { "targets": 5, "orderable": false, "searchable": false } // Actions
         ]
+    });
+
+    function parseDuration(durationStr) {
+        let hours = 0;
+        let minutes = 0;
+        if (durationStr.includes('h')) {
+            const parts = durationStr.split('h');
+            hours = parseInt(parts[0], 10) || 0;
+            if (parts[1] && parts[1].includes('m')) {
+                minutes = parseInt(parts[1].replace('m', '').trim(), 10) || 0;
+            }
+        } else if (durationStr.includes('m')) {
+            minutes = parseInt(durationStr.replace('m', '').trim(), 10) || 0;
+        }
+        return { hours, minutes };
+    }
+
+    $('#sessionHistoryTable').on('click', '.edit-button', function() {
+        const row = $(this).closest('tr');
+        if (row.hasClass('is-editing')) {
+            return;
+        }
+        row.addClass('is-editing');
+
+        const durationCell = row.find('td:nth-child(2)');
+        const originalDuration = durationCell.text();
+
+        row.data('original-duration', originalDuration);
+
+        const { hours, minutes } = parseDuration(originalDuration);
+
+        const editControls = `
+            <input type="number" class="duration-hours-input" value="${hours}" min="0" style="width: 40px;"> h
+            <input type="number" class="duration-minutes-input" value="${minutes}" min="0" max="59" style="width: 40px;"> m
+            <button class="save-button" style="margin-left: 10px;">Save</button>
+            <button class="cancel-button" style="margin-left: 5px;">Cancel</button>
+        `;
+        durationCell.html(editControls);
+    });
+
+    $('#sessionHistoryTable').on('click', '.cancel-button', function() {
+        const row = $(this).closest('tr');
+        row.removeClass('is-editing');
+        const durationCell = row.find('td:nth-child(2)');
+        const originalDuration = row.data('original-duration');
+        if (originalDuration) {
+            durationCell.text(originalDuration);
+            row.removeData('original-duration');
+        }
+    });
+
+    $('#sessionHistoryTable').on('click', '.save-button', function() {
+        const row = $(this).closest('tr');
+        row.removeClass('is-editing');
+        const sessionId = row.data('session-id');
+        const hours = parseInt(row.find('.duration-hours-input').val(), 10) || 0;
+        const minutes = parseInt(row.find('.duration-minutes-input').val(), 10) || 0;
+        const newDuration = (hours * 60) + minutes;
+
+        fetch(`http://localhost:8088/update-session-duration`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: sessionId, newDuration: newDuration })
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Failed to update session duration.');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating session duration:', error);
+            alert('An error occurred while updating the session duration.');
+        });
     });
 
     $('#sessionHistoryTable').on('click', '.delete-button', function() {
