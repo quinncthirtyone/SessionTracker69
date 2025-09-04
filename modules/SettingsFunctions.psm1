@@ -550,18 +550,11 @@ function RenderAddGameForm() {
             $result = $openFileDialog.ShowDialog()
 
             if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
-                $textExe.Text = $openFileDialog.FileName
-                $gameExeFile = Get-Item $textExe.Text
+                $gameExeFile = Get-Item $openFileDialog.FileName
                 $gameExeName = $gameExeFile.BaseName
+                $textExe.Text = $gameExeFile.Name
 
                 if ($textName.Text -eq "") { $textName.Text = $gameExeName }
-
-                $entityFound = DoesEntityExists "games" "exe_name" $gameExeName
-                if ($null -ne $entityFound) {
-                    ShowMessage "Another Game with Executable $gameExeName.exe already exists`r`nSee Games List." "OK" "Asterisk"
-                    $textExe.Text = ""
-                    return
-                }
 
                 $gameIconPath = "$env:TEMP\GmGdn-{0}.jpg" -f $(Get-Random)
                 $gameIcon = [System.Drawing.Icon]::ExtractAssociatedIcon($gameExeFile)
@@ -583,14 +576,12 @@ function RenderAddGameForm() {
                 return
             }
             $gameName = $textName.Text
-            $gameExeName = ""
+            $gameExeName = $textExe.Text -replace '\.exe$',''
 
-            if (Test-Path $textExe.Text) {
-                $gameExeFile = Get-Item $textExe.Text
-                $gameExeName = $gameExeFile.BaseName
-            }
-            else {
-                $gameExeName = $textExe.Text -replace '\.exe$',''
+            $entityFound = DoesEntityExists "games" "exe_name" $gameExeName
+            if ($null -ne $entityFound) {
+                ShowMessage "Another Game with Executable $gameExeName.exe already exists`r`nSee Games List." "OK" "Asterisk"
+                return
             }
 
             $gameIconPath = $pictureBoxImagePath.Text
