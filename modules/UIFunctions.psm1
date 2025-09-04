@@ -222,7 +222,7 @@ function RenderGamingTime() {
     $profileId = Get-ActiveProfile
     $workingDirectory = (Get-Location).Path
 
-    $getGamingTimeByGameQuery = "SELECT strftime('%Y-%m-%d', session_start_time, 'unixepoch') as play_date, game_name, SUM(session_duration_minutes) as total_duration, g.color_hex FROM session_history sh JOIN games g ON sh.game_name = g.name WHERE sh.profile_id = $profileId GROUP BY play_date, game_name ORDER BY play_date"
+    $getGamingTimeByGameQuery = "SELECT strftime('%Y-%m-%d', session_start_time, 'unixepoch', 'localtime') as play_date, game_name, SUM(session_duration_minutes) as total_duration, g.color_hex FROM session_history sh JOIN games g ON sh.game_name = g.name WHERE sh.profile_id = $profileId GROUP BY play_date, game_name ORDER BY play_date"
 
     $gamingTimeData = RunDBQuery $getGamingTimeByGameQuery
     if ($gamingTimeData.Length -eq 0) {
