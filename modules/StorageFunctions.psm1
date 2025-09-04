@@ -456,18 +456,18 @@ function Switch-SessionProfile($SessionId, $NewProfileId) {
 
 function RecordPlaytimOnDate($PlayTime) {
     $profileId = Get-ActiveProfile
-    $existingPlayTimeQuery = "SELECT play_time FROM daily_playtime WHERE play_date like DATE('now') AND profile_id = {0}" -f $profileId
+    $existingPlayTimeQuery = "SELECT play_time FROM daily_playtime WHERE play_date like DATE('now', 'localtime') AND profile_id = {0}" -f $profileId
 
     $existingPlayTime = (RunDBQuery $existingPlayTimeQuery).play_time
 
     $recordPlayTimeQuery = ""
     if ($null -eq $existingPlayTime) {
-        $recordPlayTimeQuery = "INSERT INTO daily_playtime(play_date, play_time, profile_id) VALUES (DATE('now'), {0}, {1})" -f $PlayTime, $profileId
+        $recordPlayTimeQuery = "INSERT INTO daily_playtime(play_date, play_time, profile_id) VALUES (DATE('now', 'localtime'), {0}, {1})" -f $PlayTime, $profileId
     }
     else {
         $updatedPlayTime = $PlayTime + $existingPlayTime
 
-        $recordPlayTimeQuery = "UPDATE daily_playtime SET play_time = {0} WHERE play_date like DATE('now') AND profile_id = {1}" -f $updatedPlayTime, $profileId
+        $recordPlayTimeQuery = "UPDATE daily_playtime SET play_time = {0} WHERE play_date like DATE('now', 'localtime') AND profile_id = {1}" -f $updatedPlayTime, $profileId
     }
 
     Log "Updating playTime for today in database for profile $profileId"
@@ -482,7 +482,7 @@ function RecordSessionHistory() {
     )
 
     $profileId = Get-ActiveProfile
-    $sessionStartTimeUnix = (Get-Date $SessionStartTime -UFormat %s).Split('.')[0]
+    $sessionStartTimeUnix = [int64](($SessionStartTime.ToUniversalTime() - (New-Object DateTime 1970,1,1,0,0,0,([DateTimeKind]::Utc))).TotalSeconds)
 
     $insertSessionQuery = "INSERT INTO session_history (game_name, session_start_time, session_duration_minutes, profile_id) VALUES (@GameName, @SessionStartTime, @SessionDuration, @ProfileId)"
 
