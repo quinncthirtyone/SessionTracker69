@@ -568,7 +568,7 @@ try {
                         $profileIdsToUpdate = Update-SessionDuration -SessionId $sessionId -NewDuration $newDuration
 
                         if ($null -ne $profileIdsToUpdate) {
-                            Update-AllStats -ProfileIds $profileIdsToUpdate
+                            UpdateAllStatsInBackground -ProfileIds $profileIdsToUpdate
                         }
                     }
                 }
