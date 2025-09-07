@@ -62,20 +62,25 @@ td:first-child img {
 /* Define specific styles for the Name column */
 td:nth-child(2) {
   font-weight: bold;
-  width: 35%;
+  width: 15%;
+}
+
+/* Define specific styles for the Playtime column */
+td:nth-child(3) {
+  width: 45%;
 }
 
 /* Define specific styles for the Sessions column */
-td:nth-child(5) {
+td:nth-child(4) {
   width: 5%;
 }
 
 /* Define specific styles for the Status column */
-td:nth-child(6) {
+td:nth-child(5) {
   width: 5%;
 }
 
-td:nth-child(6) img {
+td:nth-child(5) img {
   height: inherit;
   margin-left: auto;
   margin-right: auto;
