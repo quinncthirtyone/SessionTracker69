@@ -9,7 +9,6 @@ $(document).ready(function () {
     gamesData.games.forEach(game => {
         const safeIconPath = DOMPurify.sanitize(game.IconPath);
         const safeName = DOMPurify.sanitize(game.Name);
-        const safePlatform = DOMPurify.sanitize(game.Platform);
         const safePlaytime = DOMPurify.sanitize(game.Playtime);
         const safeSessionCount = DOMPurify.sanitize(game.SessionCount);
         const safeStatusText = DOMPurify.sanitize(game.StatusText);
@@ -20,7 +19,6 @@ $(document).ready(function () {
             <tr>
                 <td><img src="${safeIconPath}" class="game-icon" onerror="this.onerror=null;this.src='resources/images/default.png';"></td>
                 <td>${safeName}</td>
-                <td>${safePlatform}</td>
                 <td>${safePlaytime}</td>
                 <td>${safeSessionCount}</td>
                 <td><div>${safeStatusText}</div><img src="${safeStatusIcon}"></td>
@@ -33,7 +31,7 @@ $(document).ready(function () {
     $('table').DataTable({
         columnDefs: [
           {
-            targets: 3,
+            targets: 2,
             className: "playtimegradient",
             render: function (data, type, row, meta) {
               if (type === "display" || type === "filter") {
@@ -65,7 +63,7 @@ $(document).ready(function () {
             },
           },
           {
-            targets: 6,
+            targets: 5,
             render: function (data, type, row, meta) {
               if (type === "display" || type === "filter") {
                 var utcSeconds = parseInt(data);
@@ -85,7 +83,7 @@ $(document).ready(function () {
           },
         ],
         order: [
-          [6, "desc"],
+          [5, "desc"],
         ],
         ordering: true,
         paging: "numbers",

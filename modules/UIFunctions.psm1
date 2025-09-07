@@ -206,7 +206,6 @@ function RenderGameList() {
         $gameObject = [pscustomobject]@{
             IconPath      = $iconPath
             Name          = $name
-            Platform      = $gameRecord.platform
             Playtime      = $gameRecord.play_time
             SessionCount  = [string]$gameRecord.session_count
             StatusText    = $statusText
