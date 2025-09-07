@@ -168,25 +168,12 @@ function MonitorGame($DetectedExe) {
         RecordSessionHistory -GameName $gameName -SessionStartTime $sessionStartTime -SessionDuration $currentPlayTime
     }
 
-    if ($null -ne $entityFound) {
-        Log "Game Already Exists. Updating PlayTime and Last Played Date"
-        $recordedGamePlayTime = GetPlayTime $gameName
-        $recordedGameIdleTime = GetIdleTime $gameName
-        $updatedPlayTime = $recordedGamePlayTime + $currentPlayTime
-        $updatedIdleTime = $recordedGameIdleTime + $currentIdleTime
-
-        UpdateGameOnSession -GameName $gameName -GamePlayTime $updatedPlayTime -GameIdleTime $updatedIdleTime -GameLastPlayDate $updatedLastPlayDate
-    }
-    else {
+    if ($null -eq $entityFound) {
         Log "Detected emulated game is new and doesn't exist already. Adding to database."
 
         SaveGame -GameName $gameName -GameExeName $DetectedExe -GameIconPath "./icons/default.png" `
             -GamePlatform $emulatedGameDetails.Platform -GameRomBasedName $gameName -GameIdleDetection $idleDetectionEnabled
-            
-        UpdateGameOnSession -GameName $gameName -GamePlayTime $currentPlayTime -GameIdleTime $currentIdleTime -GameLastPlayDate $updatedLastPlayDate
     }
-
-    RecordPlaytimOnDate($currentPlayTime)
 
     $databaseFileHashAfter = CalculateFileHash '.\GamingGaiden.db'
     Log "Database hash after: $databaseFileHashAfter"
