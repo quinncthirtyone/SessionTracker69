@@ -459,13 +459,12 @@ try {
         try {
             [System.Threading.Monitor]::Enter($dbLock)
             $currentProfileId = Get-ActiveProfile
-            Update-AllStats -ProfileIds $currentProfileId
             UpdateAllStatsInBackground -ProfileIds $currentProfileId
         }
         finally {
             [System.Threading.Monitor]::Exit($dbLock)
         }
-        $AppNotifyIcon.ShowBalloonTip(3000, "Recalculation Complete", "Statistics for the current profile have been successfully recalculated.", [System.Windows.Forms.ToolTipIcon]::Info)
+        $AppNotifyIcon.ShowBalloonTip(3000, "UI Refresh Complete", "All pages have been updated with the latest data.", [System.Windows.Forms.ToolTipIcon]::Info)
     })
 
     $resetIdleTimeMenuItem.Add_Click({
@@ -560,12 +559,13 @@ try {
                         Remove-IdleSession -SessionId $sessionId
                         UpdateAllStatsInBackground
                     }
-                    elseif ($command -eq "update-session-duration") {
+                    elseif ($command -eq "update-session") {
                         $requestBody = (New-Object System.IO.StreamReader($request.InputStream)).ReadToEnd()
                         $requestData = ConvertFrom-Json $requestBody
                         $sessionId = $requestData.sessionId
+                        $newGameName = $requestData.newGameName
                         $newDuration = $requestData.newDuration
-                        $profileIdsToUpdate = Update-SessionDuration -SessionId $sessionId -NewDuration $newDuration
+                        $profileIdsToUpdate = Update-Session -SessionId $sessionId -NewGameName $newGameName -NewDuration $newDuration
 
                         if ($null -ne $profileIdsToUpdate) {
                             UpdateAllStatsInBackground -ProfileIds $profileIdsToUpdate

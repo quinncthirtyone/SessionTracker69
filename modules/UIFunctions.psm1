@@ -115,7 +115,30 @@ function RenderGameList() {
     $profileId = Get-ActiveProfile
     $workingDirectory = (Get-Location).Path
 
-    $getAllGamesQuery = "SELECT g.name, g.icon, g.platform, gs.play_time, COALESCE(gs.session_count, 0) as session_count, gs.completed, gs.last_play_date, gs.status FROM games g JOIN game_stats gs ON g.id = gs.game_id WHERE gs.profile_id = $profileId"
+    $getAllGamesQuery = "SELECT
+                            g.name,
+                            g.icon,
+                            g.platform,
+                            COALESCE(sh_agg.total_play_time, 0) AS play_time,
+                            COALESCE(sh_agg.session_count, 0) AS session_count,
+                            gs.completed,
+                            gs.last_play_date,
+                            gs.status
+                        FROM
+                            games g
+                        LEFT JOIN
+                            (SELECT
+                                game_name,
+                                SUM(session_duration_minutes) AS total_play_time,
+                                COUNT(*) AS session_count
+                            FROM
+                                session_history
+                            WHERE
+                                profile_id = $profileId
+                            GROUP BY
+                                game_name) sh_agg ON g.name = sh_agg.game_name
+                        LEFT JOIN
+                            game_stats gs ON g.id = gs.game_id AND gs.profile_id = $profileId"
     $gameRecords = RunDBQuery $getAllGamesQuery
     if ($gameRecords.Length -eq 0) {
         if(-Not $InBackground) {
@@ -129,7 +152,8 @@ function RenderGameList() {
     $maxPlayTime = (RunDBQuery $getMaxPlayTime).max_play_time
 
     $games = [System.Collections.Generic.List[object]]::new()
-    $totalPlayTime = 0
+    $totalPlayTimeQuery = "SELECT SUM(session_duration_minutes) FROM session_history WHERE profile_id = $profileId"
+    $totalPlayTime = RunDBQuery $totalPlayTimeQuery
 
     foreach ($gameRecord in $gameRecords) {
         $name = $gameRecord.name
@@ -139,7 +163,10 @@ function RenderGameList() {
         $jpgPath = "$workingDirectory\ui\resources\images\$imageFileName.jpg"
         $iconPath = ".\resources\images\$imageFileName.png"
 
-        if (-Not (Test-Path $pngPath)) {
+        if ($null -eq $gameRecord.icon) {
+            $iconPath = ".\resources\images\default.png"
+        }
+        elseif (-Not (Test-Path $pngPath)) {
             if (Test-Path $jpgPath) {
                 $image = [System.Drawing.Image]::FromFile($jpgPath)
                 $image.Save($pngPath, [System.Drawing.Imaging.ImageFormat]::Png)
@@ -184,10 +211,9 @@ function RenderGameList() {
             LastPlayedOn  = $gameRecord.last_play_date
         }
         $null = $games.Add($gameObject)
-        $totalPlayTime += $gameRecord.play_time
     }
 
-    $totalPlayTimeString = PlayTimeMinsToString $totalPlayTime
+    $totalPlayTimeString = PlayTimeMinsToString $totalPlayTime.Column1
 
     $gamesData = @{
         games = $games
@@ -259,7 +285,20 @@ function RenderMostPlayed() {
     $profileId = Get-ActiveProfile
     $workingDirectory = (Get-Location).Path
 
-    $getGamesPlayTimeDataQuery = "SELECT g.name, gs.play_time as time, COALESCE(g.color_hex, '#cccccc') as color_hex FROM games g JOIN game_stats gs ON g.id = gs.game_id WHERE gs.profile_id = $profileId ORDER BY gs.play_time DESC"
+    $getGamesPlayTimeDataQuery = "SELECT
+                                    g.name,
+                                    SUM(sh.session_duration_minutes) as time,
+                                    COALESCE(g.color_hex, '#cccccc') as color_hex
+                                FROM
+                                    games g
+                                JOIN
+                                    session_history sh ON g.name = sh.game_name
+                                WHERE
+                                    sh.profile_id = $profileId
+                                GROUP BY
+                                    g.name
+                                ORDER BY
+                                    time DESC"
     $gamesPlayTimeData = RunDBQuery $getGamesPlayTimeDataQuery
     if ($gamesPlayTimeData.Length -eq 0) {
         if(-Not $InBackground) {
@@ -310,28 +349,32 @@ function RenderSummary() {
     }
 
     $getGamingPCsQuery = "SELECT gp.*,
-                            COALESCE(SUM(dp.play_time) / 60, 0) AS total_hours,
+                            COALESCE(SUM(sh.session_duration_minutes) / 60, 0) AS total_hours,
                             CAST((julianday(COALESCE(datetime(gp.end_date, 'unixepoch'), datetime('now'))) - julianday(datetime(gp.start_date, 'unixepoch'))) / 365.25 AS INTEGER) AS age_years,
                             CAST((julianday(COALESCE(datetime(gp.end_date, 'unixepoch'), datetime('now'))) - julianday(datetime(gp.start_date, 'unixepoch'))) % 365.25 / 30.4375 AS INTEGER) AS age_months
-                        FROM 
+                        FROM
                             gaming_pcs gp
-                        LEFT JOIN 
-                            daily_playtime dp 
-                        ON 
-                            dp.play_date BETWEEN DATE(datetime(gp.start_date, 'unixepoch')) 
-                                            AND DATE(COALESCE(datetime(gp.end_date, 'unixepoch'), datetime('now')))
-                        WHERE dp.profile_id = $profileId
-                        GROUP BY 
+                        LEFT JOIN
+                            session_history sh
+                        ON
+                            sh.session_start_time BETWEEN gp.start_date AND COALESCE(gp.end_date, strftime('%s', 'now'))
+                        WHERE sh.profile_id = $profileId
+                        GROUP BY
                             gp.name
                         ORDER BY
                             gp.current DESC, gp.end_date DESC;"
     $gamingPCData = RunDBQuery $getGamingPCsQuery
 
-    $TotalAnnualGamingHoursQuery = "SELECT 
-                                    strftime('%Y', play_date) AS Year, 
-                                    SUM(ROUND(play_time/60.0,2)) AS TotalPlaytime 
-                                   FROM daily_playtime WHERE profile_id = $profileId GROUP BY strftime('%Y', play_date) ORDER BY Year;"
-
+    $TotalAnnualGamingHoursQuery = "SELECT
+                                        STRFTIME('%Y', session_start_time, 'unixepoch') AS Year,
+                                        SUM(session_duration_minutes) / 60 AS TotalPlayTime
+                                    FROM
+                                        session_history
+                                    WHERE profile_id = $profileId
+                                    GROUP BY
+                                        Year
+                                    ORDER BY
+                                        Year;"
     $totalAnnualGamingHoursData = RunDBQuery $TotalAnnualGamingHoursQuery
 
     $gamingPCs = [System.Collections.Generic.List[GamingPC]]::new()
@@ -362,13 +405,17 @@ function RenderSummary() {
         $null = $gamingPCs.add($thisPC)
     }
 
-    $getGamesSummaryDataQuery = "SELECT COUNT(*) AS total_games, SUM(play_time) AS total_play_time, SUM(session_count) AS total_sessions, SUM(idle_time) AS total_idle_time FROM game_stats WHERE profile_id = $profileId"
-    $gamesSummaryData = RunDBQuery $getGamesSummaryDataQuery
+    $getSessionHistorySummaryQuery = "SELECT
+                                        COUNT(DISTINCT game_name) AS total_games,
+                                        SUM(session_duration_minutes) AS total_play_time,
+                                        COUNT(*) AS total_sessions,
+                                        MIN(session_start_time) AS min_play_date,
+                                        MAX(session_start_time) AS max_play_date
+                                    FROM session_history
+                                    WHERE profile_id = $profileId"
+    $sessionSummaryData = RunDBQuery $getSessionHistorySummaryQuery
 
-    $getPlayDateSummaryQuery = "SELECT MIN(play_date) AS min_play_date, MAX(play_date) AS max_play_date FROM daily_playtime WHERE profile_id = $profileId"
-    $playDateSummary = RunDBQuery $getPlayDateSummaryQuery
-
-    if (($null -eq $playDateSummary) -or ($null -eq $playDateSummary.min_play_date) -or ($null -eq $playDateSummary.max_play_date)) {
+    if (($null -eq $sessionSummaryData) -or ($null -eq $sessionSummaryData.min_play_date) -or ($null -eq $sessionSummaryData.max_play_date)) {
         if(-Not $InBackground) {
             ShowMessage "No play time found in DB for this profile. Please play some games first." "OK" "Error"
         }
@@ -376,13 +423,17 @@ function RenderSummary() {
         return $false
     }
 
-    $startDate = Get-Date -Date $playDateSummary.min_play_date -Format "MMM yyyy"
-    $endDate = Get-Date -Date $playDateSummary.max_play_date -Format "MMM yyyy"
+    $totalIdleTimeQuery = "SELECT SUM(session_duration_minutes) AS total_idle_time FROM idle_sessions WHERE profile_id = $profileId"
+    $totalIdleTimeMinutes = (RunDBQuery $totalIdleTimeQuery).total_idle_time
 
-    $totalPlayTime = PlayTimeMinsToString $gamesSummaryData.total_play_time
-    $totalIdleTime = PlayTimeMinsToString $gamesSummaryData.total_idle_time
+    $minDate = [datetime]::new(1970, 1, 1, 0, 0, 0, [System.DateTimeKind]::Utc)
+    $startDate = $minDate.AddSeconds($sessionSummaryData.min_play_date).ToLocalTime().ToString("MMM yyyy")
+    $endDate = $minDate.AddSeconds($sessionSummaryData.max_play_date).ToLocalTime().ToString("MMM yyyy")
 
-    $summaryStatement = "<b>Duration: </b>$startDate - $endDate. <b>Games: </b>$($gamesSummaryData.total_games). <b>Sessions: </b>$($gamesSummaryData.total_sessions).<br><br><b>Play time: </b>$totalPlayTime. <b>Idle time: </b>$totalIdleTime."
+    $totalPlayTime = PlayTimeMinsToString $sessionSummaryData.total_play_time
+    $totalIdleTime = PlayTimeMinsToString $totalIdleTimeMinutes
+
+    $summaryStatement = "<b>Duration: </b>$startDate - $endDate. <b>Games: </b>$($sessionSummaryData.total_games). <b>Sessions: </b>$($sessionSummaryData.total_sessions).<br><br><b>Play time: </b>$totalPlayTime. <b>Idle time: </b>$totalIdleTime."
 
     $summaryTable = $gamesPlayTimeVsSessionData | ConvertTo-Html -Fragment
     if ($summaryTable) {
@@ -424,7 +475,20 @@ function RenderIdleTime() {
     $profileId = Get-ActiveProfile
     $workingDirectory = (Get-Location).Path
 
-    $getGamesIdleTimeDataQuery = "SELECT g.name, ROUND(gs.idle_time / 60.0, 2) as time, COALESCE(g.color_hex, '#cccccc') as color_hex FROM games g JOIN game_stats gs ON g.id = gs.game_id WHERE gs.idle_time > 0 AND gs.profile_id = $profileId ORDER BY gs.idle_time DESC"
+    $getGamesIdleTimeDataQuery = "SELECT
+                                    g.name,
+                                    ROUND(SUM(i.session_duration_minutes) / 60.0, 2) as time,
+                                    COALESCE(g.color_hex, '#cccccc') as color_hex
+                                FROM
+                                    games g
+                                JOIN
+                                    idle_sessions i ON g.name = i.game_name
+                                WHERE
+                                    i.profile_id = $profileId
+                                GROUP BY
+                                    g.name
+                                ORDER BY
+                                    time DESC"
     $gamesIdleTimeData = @(RunDBQuery $getGamesIdleTimeDataQuery)
     if ($gamesIdleTimeData.Length -eq 0) {
         if(-Not $InBackground) {
@@ -433,7 +497,7 @@ function RenderIdleTime() {
         $jsonData = "[]"
     }
     else {
-        $getTotalIdleTimeQuery = "SELECT SUM(idle_time) as total_idle_time FROM game_stats WHERE profile_id = $profileId"
+        $getTotalIdleTimeQuery = "SELECT SUM(session_duration_minutes) as total_idle_time FROM idle_sessions WHERE profile_id = $profileId"
         $totalIdleTime = (RunDBQuery $getTotalIdleTimeQuery).total_idle_time
         $totalIdleTimeInHours = [math]::Round($totalIdleTime / 60.0, 2)
         $totalIdleTimeObject = [pscustomobject]@{
@@ -471,7 +535,7 @@ function RenderSessionHistory() {
     $workingDirectory = (Get-Location).Path
 
     # Get active sessions
-    $getSessionHistoryQuery = "SELECT sh.id, sh.game_name, sh.session_start_time, sh.session_duration_minutes, g.icon, 'Active' as type FROM session_history sh JOIN games g ON sh.game_name = g.name WHERE sh.profile_id = $profileId"
+    $getSessionHistoryQuery = "SELECT sh.id, sh.game_name, sh.session_start_time, sh.session_duration_minutes, g.icon, 'Active' as type FROM session_history sh LEFT JOIN games g ON sh.game_name = g.name WHERE sh.profile_id = $profileId"
     $activeSessions = RunDBQuery $getSessionHistoryQuery
 
     # Get idle sessions
