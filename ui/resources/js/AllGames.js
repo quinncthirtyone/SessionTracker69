@@ -69,6 +69,9 @@ $(document).ready(function () {
             render: function (data, type, row, meta) {
               if (type === "display" || type === "filter") {
                 var utcSeconds = parseInt(data);
+                if (isNaN(utcSeconds) || utcSeconds === 0) {
+                    return "N/A";
+                }
                 var date = new Date(0);
                 date.setUTCSeconds(utcSeconds);
                 return date.toLocaleDateString(undefined, {

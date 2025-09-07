@@ -152,7 +152,7 @@ function RenderGameList() {
     $maxPlayTime = (RunDBQuery $getMaxPlayTime).max_play_time
 
     $games = [System.Collections.Generic.List[object]]::new()
-    $totalPlayTimeQuery = "SELECT SUM(session_duration_minutes) FROM session_history WHERE profile_id = $profileId"
+    $totalPlayTimeQuery = "SELECT SUM(session_duration_minutes) as total_play_time FROM session_history WHERE profile_id = $profileId"
     $totalPlayTime = RunDBQuery $totalPlayTimeQuery
 
     foreach ($gameRecord in $gameRecords) {
@@ -181,12 +181,15 @@ function RenderGameList() {
             }
         }
 
-        $statusText = "Finished"
-        $statusIcon = ".\resources\images\finished.png"
-        if ($gameRecord.completed -eq 'FALSE') {
+        if ($gameRecord.completed -eq 'TRUE') {
+            $statusText = "Finished"
+            $statusIcon = ".\resources\images\finished.png"
+        }
+        else {
             $statusText = "Playing"
             $statusIcon = ".\resources\images\playing.png"
         }
+
         if ($gameRecord.status -eq 'dropped') {
             $statusText = "Dropped"
             $statusIcon = ".\resources\images\dropped.png"
@@ -213,7 +216,7 @@ function RenderGameList() {
         $null = $games.Add($gameObject)
     }
 
-    $totalPlayTimeString = PlayTimeMinsToString $totalPlayTime.Column1
+    $totalPlayTimeString = PlayTimeMinsToString $totalPlayTime.total_play_time
 
     $gamesData = @{
         games = $games
