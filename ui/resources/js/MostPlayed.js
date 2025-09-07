@@ -47,6 +47,11 @@ function updateMostPlayedChart(gameCount) {
       responsive: true,
       maintainAspectRatio: false,
       indexAxis: "y",
+      layout: {
+        padding: {
+          right: 50,
+        },
+      },
       scales: {
         y: {
           ticks: {
