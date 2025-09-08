@@ -30,10 +30,10 @@ A lightweight PowerShell-based tray application for Windows that tracks time spe
 1. Open a Powershell window as admin and run below command to allow powershell modules to load on your system. Choose `Yes` when prompted.
     - `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
-2. Download ***SessionTracker69.zip*** from the [latest release](https://github.com/quinncthirtyone/SessionTracker69/releases/latest).
-3. Extract ***SessionTracker69*** folder and Run `Install.bat`. Choose Yes/No for autostart at Boot.
+2. Download ***SessionTracker.zip*** from the [latest release](https://github.com/quinncthirtyone/SessionTracker69/releases/latest).
+3. Extract ***SessionTracker*** folder and Run `Install.bat`. Choose Yes/No for autostart at Boot.
 4. Use the shortcut on desktop / start menu for launching the application.
-5. Regularly backup your `SessionTracker69.db` and `backups` folder to avoid data loss. Click ***Settings => Open Install Directory*** option in app menu to find them.
+5. Regularly backup your `SessionTracker.db` and `backups` folder to avoid data loss. Click ***Settings => Open Install Directory*** option in app menu to find them.
 
 ## Attributions
 Built using
