@@ -1,4 +1,4 @@
-# Gaming Gaiden Manual
+# SessionTracker Manual
 
 ### How do I track a PC game?
 1. Notify icon menu *Settings => Add Game*. 
@@ -8,9 +8,9 @@
 
 ### Pre-requisite for emulated games
 
-**Gaming Gaiden tracks emulated games automatically based on emulator *Command Line* parameters.**
+**SessionTracker tracks emulated games automatically based on emulator *Command Line* parameters.**
 
-To use Gaming Gaiden, you must use *Command lines* to launch your emulated games. *Command lines* for emulator looks like below
+To use SessionTracker, you must use *Command lines* to launch your emulated games. *Command lines* for emulator looks like below
 
 - **PCSX2** *[path]\\pcsx2-qtx64-avx2.exe %ROM%*
 
@@ -27,7 +27,7 @@ Once you have your emulation setup like above..
 4. If retroarch is detected, it will automatically ask you for the core used for the platform. Add using *Add Core* button that shows.
 5. Enter extensions you use for your game rom files e.g. zip,chd,rvg in *Rom Extns*. A comma separated list of just the extension name without the leading *"."* and no spaces.
 
-Click ok to register the platform and Gaming Gaiden will now track any game you play with the added emulators automatically.
+Click ok to register the platform and SessionTracker will now track any game you play with the added emulators automatically.
 
 **Emulated games are auto detected and auto registered. Name of Rom File is used to track the game. If you change name of Rom file later, it will be re-detected as a brand new game.**
 
@@ -57,14 +57,14 @@ To pause, notify icon menu => *Stop Tracker*. To resume tracking, *Start Tracker
 
 1. Open Run Dialog by pressing *Win+R*.
 2. Enter *shell:startup* in the dialog box and press enter.
-3. Delete the *Gaming Gaiden* shortcut from the folder that opens.
+3. Delete the *SessionTracker* shortcut from the folder that opens.
 4. To re enable auto start, just run *install.bat* again from existing install directory and choose *yes* when prompted for enabling auto start.
 
 ### I accidentally corrupted / lost / deleted some or all of my data. How do I restore?
 
 Check the backup folder in the install directory, it should have backups of database. Exit the app. Copy the database file from one of the backup zip files to install directory and start the app again.
 
-### Gaming Gaiden is not tracking emulated games launched from emulator application directly.
+### SessionTracker is not tracking emulated games launched from emulator application directly.
 
 It cannot. 
 
@@ -78,9 +78,9 @@ To do this, make a copy of executable of emulator and change it's name to includ
 
 Make two copies of *Dolphin.exe* in the same directory and name them *Dolphin-Wii.exe* and *Dolphin-Gamecube.exe*.
 
-Now register Gamecube and Wii Platforms in Gaming Gaiden and use the new exes with the platform name for each. **Don't forget to update your frontend / shortcuts similarly to use the new exes.**
+Now register Gamecube and Wii Platforms in SessionTracker and use the new exes with the platform name for each. **Don't forget to update your frontend / shortcuts similarly to use the new exes.**
 
-This is the only way for Gaming Gaiden to register games under the correct platform. Otherwise if you don't care about which platform game belongs to. You can just name the platform *"Gamecube and Wii"* and use the single *"Dolphin.exe"*
+This is the only way for SessionTracker to register games under the correct platform. Otherwise if you don't care about which platform game belongs to. You can just name the platform *"Gamecube and Wii"* and use the single *"Dolphin.exe"*
 
 Hide the extra copies of *"Dplphin.exe"* in explorer to keep your Dolphin installation looking neat and clean.
 

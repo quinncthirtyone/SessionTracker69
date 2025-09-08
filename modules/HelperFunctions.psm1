@@ -1,13 +1,13 @@
 function Log($MSG) {
     # Use a named mutex to ensure thread-safe logging across different processes/threads.
-    $mutex = New-Object System.Threading.Mutex($false, "GamingGaidenGlobalLogMutex")
+    $mutex = New-Object System.Threading.Mutex($false, "SessionTrackerGlobalLogMutex")
     try {
         # Wait indefinitely for the mutex.
         $null = $mutex.WaitOne()
         $timestamp = (Get-date -f s)
         $logMessage = "$timestamp : $MSG"
         # Use Add-Content for safer file appending.
-        Add-Content -Path ".\GamingGaiden.log" -Value $logMessage
+        Add-Content -Path ".\SessionTracker.log" -Value $logMessage
     }
     finally {
         # Always release the mutex, even if an error occurs.
@@ -137,7 +137,7 @@ function OpenFileDialog($Title, $Filters, $DirectoryPath = [Environment]::GetFol
 }
 
 function ShowMessage($Msg, $Buttons, $Type) {
-    [System.Windows.Forms.MessageBox]::Show($Msg, 'Gaming Gaiden', $Buttons, $Type)
+    [System.Windows.Forms.MessageBox]::Show($Msg, 'SessionTracker', $Buttons, $Type)
 }
 
 function CalculateFileHash ($FilePath) {
@@ -157,19 +157,19 @@ function BackupDatabase {
     mkdir -f $workingDirectory\backups
     $timestamp = Get-Date -f "dd-MM-yyyy-HH.mm.ss"
 
-    Copy-Item ".\GamingGaiden.db" "$env:TEMP\"
-    Compress-Archive "$env:TEMP\GamingGaiden.db" ".\backups\GamingGaiden-$timestamp.zip"
-    Remove-Item "$env:TEMP\GamingGaiden.db"
+    Copy-Item ".\SessionTracker.db" "$env:TEMP\"
+    Compress-Archive "$env:TEMP\SessionTracker.db" ".\backups\SessionTracker-$timestamp.zip"
+    Remove-Item "$env:TEMP\SessionTracker.db"
 
     Get-ChildItem -Path .\backups -File | Sort-Object -Property CreationTime | Select-Object -SkipLast 5 | Remove-Item
 }
 
 function RunDBQuery ($Query, $SQLParameters = $null) {
     if ($null -eq $SQLParameters) {
-        $result = Invoke-SqliteQuery -Query $Query -DataBase ".\GamingGaiden.db"
+        $result = Invoke-SqliteQuery -Query $Query -DataBase ".\SessionTracker.db"
     }
     else {
-        $result = Invoke-SqliteQuery -Query $Query -DataBase ".\GamingGaiden.db" -SqlParameters $SQLParameters
+        $result = Invoke-SqliteQuery -Query $Query -DataBase ".\SessionTracker.db" -SqlParameters $SQLParameters
     }
     return $result
 }

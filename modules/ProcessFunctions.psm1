@@ -69,7 +69,7 @@ function DetectGame() {
 }
 
 function TimeTrackerLoop($DetectedExe, $IdleDetectionEnabled, $GameName) {
-    $hwInfoSensorSession = 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden\Other1'
+    $hwInfoSensorSession = 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\SessionTracker\Other1'
     $playTimeForCurrentSession = 0
     $totalIdleTimeForCurrentSession = 0
     $exeStartTime = ($null = [System.Diagnostics.Process]::GetProcessesByName($DetectedExe)).StartTime | Sort-Object | Select-Object -First 1
@@ -117,7 +117,7 @@ function TimeTrackerLoop($DetectedExe, $IdleDetectionEnabled, $GameName) {
 function MonitorGame($DetectedExe) {
     Log "Starting monitoring for $DetectedExe"
 
-    $databaseFileHashBefore = CalculateFileHash '.\GamingGaiden.db'
+    $databaseFileHashBefore = CalculateFileHash '.\SessionTracker.db'
     Log "Database hash before: $databaseFileHashBefore"
 
     $emulatedGameDetails = $null
@@ -175,7 +175,7 @@ function MonitorGame($DetectedExe) {
             -GamePlatform $emulatedGameDetails.Platform -GameRomBasedName $gameName -GameIdleDetection $idleDetectionEnabled
     }
 
-    $databaseFileHashAfter = CalculateFileHash '.\GamingGaiden.db'
+    $databaseFileHashAfter = CalculateFileHash '.\SessionTracker.db'
     Log "Database hash after: $databaseFileHashAfter"
 
     if ($databaseFileHashAfter -ne $databaseFileHashBefore) {

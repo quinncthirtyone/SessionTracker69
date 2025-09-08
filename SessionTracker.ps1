@@ -1,9 +1,9 @@
 
 #Requires -Version 5.1
 
-#_pragma iconFile '.\build\GamingGaiden\icons\running.ico'
-#_pragma title 'Gaming Gaiden: Gameplay Time Tracker'
-#_pragma product 'Gaming Gaiden'
+#_pragma iconFile '.\build\SessionTracker\icons\running.ico'
+#_pragma title 'SessionTracker: Gameplay Time Tracker'
+#_pragma product 'SessionTracker'
 #_pragma copyright '© 2023 Kulvinder Singh'
 #_pragma version '2025.07.28'
 
@@ -29,7 +29,7 @@ try {
         Remove-Item "$env:TEMP\GmGdn-TrackingGame.txt" -ErrorAction silentlycontinue
     Set-Itemproperty -path $HWInfoSensorTracking -Name 'Value' -value 0 | Out-Null
     Set-Itemproperty -path $HWInfoSensorSession -Name 'Value' -value 0 | Out-Null
-        $AppNotifyIcon.Text = "Gaming Gaiden"
+        $AppNotifyIcon.Text = "SessionTracker"
     }
 
     function global:Set-RunningIcon() {
@@ -75,7 +75,7 @@ try {
             [string[]]$EntityList = $null
         )
 
-        $databaseFileHashBefore = CalculateFileHash '.\GamingGaiden.db'; Log "Database hash before: $databaseFileHashBefore"
+        $databaseFileHashBefore = CalculateFileHash '.\SessionTracker.db'; Log "Database hash before: $databaseFileHashBefore"
 
         if ($null -eq $EntityList) {
             $SettingsFunctionToCall.Invoke()
@@ -84,7 +84,7 @@ try {
             $SettingsFunctionToCall.Invoke((, $EntityList))
         }
 
-        $databaseFileHashAfter = CalculateFileHash '.\GamingGaiden.db'; Log "Database hash after: $databaseFileHashAfter"
+        $databaseFileHashAfter = CalculateFileHash '.\SessionTracker.db'; Log "Database hash after: $databaseFileHashAfter"
 
         if ($databaseFileHashAfter -ne $databaseFileHashBefore) {
             BackupDatabase
@@ -104,7 +104,7 @@ try {
             Set-Itemproperty -path $HWInfoSensorTracking -Name 'Value' -value 1 | Out-Null
         }
         else {
-            if ($AppNotifyIcon.Text -ne "Gaming Gaiden") {
+            if ($AppNotifyIcon.Text -ne "SessionTracker") {
                 ResetIconAndSensors
                 $AppNotifyIcon.Icon = $IconRunning
             }
@@ -112,26 +112,26 @@ try {
     }
 
     #------------------------------------------
-    # Exit if Gaming Gaiden is being started from non standard location
+    # Exit if SessionTracker is being started from non standard location
     $currentDirectory = (Get-Location).path
-    if ($currentDirectory -ne "C:\ProgramData\GamingGaiden") {
+    if ($currentDirectory -ne "C:\ProgramData\SessionTracker") {
         ShowMessage "Launched from non standard location. Please install and use the created shortcuts to start app." "Ok" "Error"
         exit 1;
     }
 
     #------------------------------------------
-    # Exit if Gaming Gaiden is already Running
-    $results = [System.Diagnostics.Process]::GetProcessesByName("GamingGaiden")
+    # Exit if SessionTracker is already Running
+    $results = [System.Diagnostics.Process]::GetProcessesByName("SessionTracker")
     if ($results.Length -gt 1) {
-        ShowMessage "Gaming Gaiden is already running. Check system tray.`r`nNot Starting another Instance." "Ok" "Error"
-        Log "Error: Gaming Gaiden already running. Not Starting another Instance."
+        ShowMessage "SessionTracker is already running. Check system tray.`r`nNot Starting another Instance." "Ok" "Error"
+        Log "Error: SessionTracker already running. Not Starting another Instance."
         exit 1;
     }
 
     #------------------------------------------
     # Clear log at application boot if log size has grown above 5 MB
-    if ((Test-Path .\GamingGaiden.log) -And ((Get-Item .\GamingGaiden.log).Length / 1MB -gt 5)) {
-        Remove-Item ".\GamingGaiden.log" -ErrorAction silentlycontinue
+    if ((Test-Path .\SessionTracker.log) -And ((Get-Item .\SessionTracker.log).Length / 1MB -gt 5)) {
+        Remove-Item ".\SessionTracker.log" -ErrorAction silentlycontinue
         $timestamp = Get-date -f s
         Log "Log grew more than 5 MB. Clearing."
     }
@@ -146,13 +146,13 @@ try {
 
     #------------------------------------------
     # Integrate With HWiNFO
-    $HWInfoSensorTracking = 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden\Other0'
-    $HWInfoSensorSession = 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden\Other1'
+    $HWInfoSensorTracking = 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\SessionTracker\Other0'
+    $HWInfoSensorSession = 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\SessionTracker\Other1'
 
-    if ((Test-Path "HKCU:\SOFTWARE\HWiNFO64") -And -Not (Test-Path "HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden")) {
+    if ((Test-Path "HKCU:\SOFTWARE\HWiNFO64") -And -Not (Test-Path "HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\SessionTracker")) {
         Log "Integrating with HWiNFO"
-        New-Item -path 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden' -Name 'Other0' -Force | Out-Null
-        New-Item -path 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\Gaming Gaiden' -Name 'Other1' -Force | Out-Null
+        New-Item -path 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\SessionTracker' -Name 'Other0' -Force | Out-Null
+        New-Item -path 'HKCU:\SOFTWARE\HWiNFO64\Sensors\Custom\SessionTracker' -Name 'Other1' -Force | Out-Null
         Set-Itemproperty -path $HWInfoSensorTracking -Name 'Name' -value 'Tracking' | Out-Null
         Set-Itemproperty -path $HWInfoSensorTracking -Name 'Unit' -value 'Yes/No' | Out-Null
         Set-Itemproperty -path $HWInfoSensorTracking -Name 'Value' -value 0 | Out-Null
@@ -161,7 +161,7 @@ try {
         Set-Itemproperty -path $HWInfoSensorSession -Name 'Value' -value 0 | Out-Null
     }
     else {
-        Log "HWiNFO not detected. Or Gaming Gaiden is already Integrated. Skipping Auto Integration"
+        Log "HWiNFO not detected. Or SessionTracker is already Integrated. Skipping Auto Integration"
     }
 
     #------------------------------------------
@@ -197,9 +197,9 @@ try {
         }
         catch {
             $timestamp = (Get-date -f %d-%M-%y`|%H:%m:%s)
-            Write-Output "$timestamp : Error: A user or system error has caused an exception. Check log for details." >> ".\GamingGaiden.log"
-            Write-Output "$timestamp : Exception: $($_.Exception.Message)" >> ".\GamingGaiden.log"
-            Write-Output "$timestamp : Error: Tracker job has failed. Please restart from app menu to continue detection." >> ".\GamingGaiden.log"
+            Write-Output "$timestamp : Error: A user or system error has caused an exception. Check log for details." >> ".\SessionTracker.log"
+            Write-Output "$timestamp : Exception: $($_.Exception.Message)" >> ".\SessionTracker.log"
+            Write-Output "$timestamp : Error: Tracker job has failed. Please restart from app menu to continue detection." >> ".\SessionTracker.log"
             exit 1;
         }
     }
@@ -228,7 +228,7 @@ try {
     $IconStopped = [System.Drawing.Icon]::new(".\icons\stopped.ico")
 
     $AppNotifyIcon = New-Object System.Windows.Forms.NotifyIcon
-    $AppNotifyIcon.Text = "Gaming Gaiden"
+    $AppNotifyIcon.Text = "SessionTracker"
     $AppNotifyIcon.Icon = $IconRunning
     $AppNotifyIcon.Visible = $true
 
@@ -594,10 +594,10 @@ try {
 }
 catch {
     [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')    | out-null
-    [System.Windows.Forms.MessageBox]::Show("Exception: $($_.Exception.Message). Check log for details", 'Gaming Gaiden', "OK", "Error")
+    [System.Windows.Forms.MessageBox]::Show("Exception: $($_.Exception.Message). Check log for details", 'SessionTracker', "OK", "Error")
 
     $timestamp = Get-date -f s
-    Write-Output "$timestamp : Error: A user or system error has caused an exception. Check log for details." >> ".\GamingGaiden.log"
-    Write-Output "$timestamp : Exception: $($_.Exception.Message)" >> ".\GamingGaiden.log"
+    Write-Output "$timestamp : Error: A user or system error has caused an exception. Check log for details." >> ".\SessionTracker.log"
+    Write-Output "$timestamp : Exception: $($_.Exception.Message)" >> ".\SessionTracker.log"
     exit 1;
 }

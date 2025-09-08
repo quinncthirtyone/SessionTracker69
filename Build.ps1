@@ -1,8 +1,8 @@
 ﻿[System.Reflection.Assembly]::LoadWithPartialName('System.Web') | out-null
 
-Remove-Item -Recurse .\build\GamingGaiden
+Remove-Item -Recurse .\build\SessionTracker
 
-mkdir -f .\build\GamingGaiden
+mkdir -f .\build\SessionTracker
 
 Get-ChildItem -File .\ui\*.html -Exclude 404.html | Remove-Item
 
@@ -19,16 +19,16 @@ Get-ChildItem .\ui\resources\images\ -Exclude default.png, dropped.png, pc.png, 
 
 $SourceFiles = ".\Install.bat", ".\modules", ".\icons", ".\ui"
 
-Copy-Item -Recurse -Path $SourceFiles -Destination .\build\GamingGaiden\ -Force
+Copy-Item -Recurse -Path $SourceFiles -Destination .\build\SessionTracker\ -Force
 
 # Add 404 pages for all ui pages for first time render
 $fileNames = @("Summary.html", "GamingTime.html", "MostPlayed.html", "AllGames.html", "IdleTime.html", "GamesPerPlatform.html", "PCvsEmulation.html")
 foreach ($fileName in $fileNames) {
-    Copy-Item -Path .\ui\404.html -Destination .\build\GamingGaiden\ui\$fileName -Force
+    Copy-Item -Path .\ui\404.html -Destination .\build\SessionTracker\ui\$fileName -Force
 }
 
-ps12exe -inputFile ".\GamingGaiden.ps1" -outputFile ".\build\GamingGaiden\GamingGaiden.exe"
+ps12exe -inputFile ".\SessionTracker.ps1" -outputFile ".\build\SessionTracker\SessionTracker.exe"
 
-Compress-Archive -Force -Path .\build\GamingGaiden -DestinationPath .\build\GamingGaiden.zip
+Compress-Archive -Force -Path .\build\SessionTracker -DestinationPath .\build\SessionTracker.zip
 
-Remove-Item -Recurse .\build\GamingGaiden
+Remove-Item -Recurse .\build\SessionTracker

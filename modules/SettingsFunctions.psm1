@@ -17,7 +17,7 @@ function FilterListBox {
 
 function RenderEditGameForm($GamesList) {
 
-    $editGameForm = CreateForm "Gaming Gaiden: Edit Game" 865 265 ".\icons\running.ico"
+    $editGameForm = CreateForm "SessionTracker: Edit Game" 865 265 ".\icons\running.ico"
 
     $imagePath = "./icons/default.png"
 
@@ -315,7 +315,7 @@ function RenderEditGameForm($GamesList) {
 
 function RenderEditPlatformForm($PlatformsList) {
 
-    $editPlatformForm =	CreateForm "Gaming Gaiden: Edit Platform" 645  320 ".\icons\running.ico"
+    $editPlatformForm =	CreateForm "SessionTracker: Edit Platform" 645  320 ".\icons\running.ico"
 
     # Hidden fields to save non user editable values
     $textOriginalPlatformName = CreateTextBox "" 654 329 1 1; $textOriginalPlatformName.hide(); $editPlatformForm.Controls.Add($textOriginalPlatformName)
@@ -493,7 +493,7 @@ function RenderEditPlatformForm($PlatformsList) {
 }
 
 function RenderAddGameForm() {
-    $addGameForm =	CreateForm "Gaming Gaiden: Add Game" 570 255 ".\icons\running.ico"
+    $addGameForm =	CreateForm "SessionTracker: Add Game" 570 255 ".\icons\running.ico"
 
     $labelName = Createlabel "Name:" 170 20; $addGameForm.Controls.Add($labelName)
     $textName = CreateTextBox "" 245 20 300 20;	$addGameForm.Controls.Add($textName)
@@ -613,7 +613,7 @@ function RenderAddGameForm() {
 
 function RenderGamingPCForm($PCList) {
 
-    $gamingPCForm = CreateForm "Gaming Gaiden: Gaming PCs" 655 265 ".\icons\running.ico"
+    $gamingPCForm = CreateForm "SessionTracker: Gaming PCs" 655 265 ".\icons\running.ico"
 
     $imagePath = "./icons/pc.png"
 
@@ -887,7 +887,7 @@ function RenderGamingPCForm($PCList) {
 }
 
 function RenderAddPlatformForm() {
-    $addPlatformForm =	CreateForm "Gaming Gaiden: Add Emulator" 395 265 ".\icons\running.ico"
+    $addPlatformForm =	CreateForm "SessionTracker: Add Emulator" 395 265 ".\icons\running.ico"
 
     $labelName = Createlabel "Platorm:" 10 20; $addPlatformForm.Controls.Add($labelName)
     $textName = CreateTextBox "" 85 20 200 20; $addPlatformForm.Controls.Add($textName)
@@ -1003,7 +1003,7 @@ function RenderAddPlatformForm() {
 }
 
 function RenderProfileSettingsForm() {
-    $profileSettingsForm = CreateForm "Gaming Gaiden: Name Profiles" 300 180 ".\icons\running.ico"
+    $profileSettingsForm = CreateForm "SessionTracker: Name Profiles" 300 180 ".\icons\running.ico"
 
     $profiles = Get-Profiles
 

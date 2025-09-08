@@ -1,6 +1,6 @@
 function SetupDatabase() {
     try {
-        $dbConnection = New-SQLiteConnection -DataSource ".\GamingGaiden.db"
+        $dbConnection = New-SQLiteConnection -DataSource ".\SessionTracker.db"
 
         # Shared tables
         $createGamesTableQuery = "CREATE TABLE IF NOT EXISTS games (
@@ -156,11 +156,11 @@ function SetupDatabase() {
     }
     catch {
         [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')    | out-null
-        [System.Windows.Forms.MessageBox]::Show("Exception: $($_.Exception.Message). Check log for details", 'Gaming Gaiden', "OK", "Error")
+        [System.Windows.Forms.MessageBox]::Show("Exception: $($_.Exception.Message). Check log for details", 'SessionTracker', "OK", "Error")
 
         $timestamp = Get-date -f s
-        Write-Output "$timestamp : Error: A user or system error has caused an exception. Database setup could not be finished. Check log for details." >> ".\GamingGaiden.log"
-        Write-Output "$timestamp : Exception: $($_.Exception.Message)" >> ".\GamingGaiden.log"
+        Write-Output "$timestamp : Error: A user or system error has caused an exception. Database setup could not be finished. Check log for details." >> ".\SessionTracker.log"
+        Write-Output "$timestamp : Exception: $($_.Exception.Message)" >> ".\SessionTracker.log"
         exit 1;
     }
 }

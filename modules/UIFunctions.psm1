@@ -643,7 +643,7 @@ function RenderAboutDialog() {
     $labelHome.Location = New-Object Drawing.Point(160, 140)
     $labelHome.AutoSize = $true
     $labelHome.Add_LinkClicked({
-            Start-Process "https://github.com/kulvind3r/GamingGaiden"
+            Start-Process "https://github.com/quinncthirtyone/SessionTracker69"
         })
     $aboutForm.Controls.Add($labelHome)
 
@@ -652,7 +652,7 @@ function RenderAboutDialog() {
     $labelAttributions.Location = New-Object Drawing.Point(70, 165)
     $labelAttributions.AutoSize = $true
     $labelAttributions.Add_LinkClicked({
-            Start-Process "https://github.com/kulvind3r/GamingGaiden#attributions"
+            Start-Process "https://github.com/quinncthirtyone/SessionTracker69#attributions"
         })
     $aboutForm.Controls.Add($labelAttributions)
 
