@@ -104,7 +104,7 @@ $(document).ready(function () {
     document
         .getElementById("Toggle-Pagination")
         .addEventListener("click", () => {
-        if ($("table").DataTable().page.len() == 9) {
+        if ($("table").DataTable().page.len() === 9) {
             document.getElementById("Toggle-Pagination").innerText =
             "Paginate";
             $("table").DataTable().page.len(-1).draw();

@@ -581,7 +581,7 @@ try {
             }
             catch {
                 Log "HTTP Listener: An error occurred: $($_.Exception.Message)"
-                if ($response -ne $null) {
+                if ($null -ne $response) {
                     $response.StatusCode = 500
                     $response.Close()
                 }
