@@ -27,7 +27,7 @@ function DetectGame() {
         # If exeList is of size 35 or less. process whole list in every batch
         while ($true) {
             foreach ($exe in $exeList) {
-                if ($null = [System.Diagnostics.Process]::GetProcessesByName($exe)) {
+                if ([System.Diagnostics.Process]::GetProcessesByName($exe)) {
                     Log "Found $exe running. Exiting detection"
                     return $exe
                 }
@@ -41,7 +41,7 @@ function DetectGame() {
         while ($true) {
             # Process most recent 10 games in every batch.
             for ($i = 0; $i -lt 10; $i++) {
-                if ($null = [System.Diagnostics.Process]::GetProcessesByName($exeList[$i])) {
+                if ([System.Diagnostics.Process]::GetProcessesByName($exeList[$i])) {
                     Log "Found $($exeList[$i]) running. Exiting detection"
                     return $exeList[$i]
                 }
@@ -50,7 +50,7 @@ function DetectGame() {
             $endIndex = [Math]::Min($startIndex + $batchSize, $exeList.length)
 
             for ($i = $startIndex; $i -lt $endIndex; $i++) {
-                if ($null = [System.Diagnostics.Process]::GetProcessesByName($exeList[$i])) {
+                if ([System.Diagnostics.Process]::GetProcessesByName($exeList[$i])) {
                     Log "Found $($exeList[$i]) running. Exiting detection"
                     return $exeList[$i]
                 }

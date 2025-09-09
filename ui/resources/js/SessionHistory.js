@@ -193,7 +193,8 @@ $(document).ready(function() {
                 // Update the cell content without a full reload
                 const gameCell = row.find('td:first-child .game-cell');
                 const iconSrc = gameCell.find('img').attr('src');
-                gameCell.html(`<img src="${iconSrc}" class="game-icon" onerror="this.onerror=null;this.src='resources/images/default.png';"> <span>${newGameName}</span>`);
+                const safeNewGameName = DOMPurify.sanitize(newGameName);
+                gameCell.html(`<img src="${iconSrc}" class="game-icon" onerror="this.onerror=null;this.src='resources/images/default.png';"> <span>${safeNewGameName}</span>`);
 
                 const durationCell = row.find('td:nth-child(2)');
                 durationCell.text(`${Math.floor(newDuration / 60)}h ${newDuration % 60}m`);

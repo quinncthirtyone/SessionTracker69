@@ -92,19 +92,21 @@ $(document).ready(function () {
         searching: true,
     });
 
-    $("#games-table_wrapper")[0].insertAdjacentHTML(
-        "afterbegin",
-        '<div id="AllGames">All Games\n' + gamesData.totalGameCount + '</div>'
-    );
-    $("#games-table_wrapper")[0].insertAdjacentHTML(
-        "afterbegin",
-        '<div id="TotalPlaytime">Total Playtime\n' + gamesData.totalPlaytime + '</div>'
-    );
+    const wrapper = $("#games-table_wrapper")[0];
+    const allGamesDiv = document.createElement('div');
+    allGamesDiv.id = 'AllGames';
+    allGamesDiv.innerText = 'All Games\n' + gamesData.totalGameCount;
+    wrapper.insertAdjacentElement('afterbegin', allGamesDiv);
+
+    const totalPlaytimeDiv = document.createElement('div');
+    totalPlaytimeDiv.id = 'TotalPlaytime';
+    totalPlaytimeDiv.innerText = 'Total Playtime\n' + gamesData.totalPlaytime;
+    wrapper.insertAdjacentElement('afterbegin', totalPlaytimeDiv);
 
     document
         .getElementById("Toggle-Pagination")
         .addEventListener("click", () => {
-        if ($("table").DataTable().page.len() == 9) {
+        if ($("table").DataTable().page.len() === 9) {
             document.getElementById("Toggle-Pagination").innerText =
             "Paginate";
             $("table").DataTable().page.len(-1).draw();

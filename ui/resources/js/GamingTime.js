@@ -36,11 +36,14 @@ function processDataForChart(targetYear, targetMonth, isYearly) {
   const colors = [...new Set(filteredData.map(d => d.color_hex))];
   const gameColorMap = Object.fromEntries(games.map((g, i) => [g, colors[i]]));
 
-  const datasets = games.map(game => ({
-    label: game,
-    data: [],
-    backgroundColor: gameColorMap[game],
-  }));
+  const datasets = games.map(game => {
+    const backgroundColor = gameColorMap.hasOwnProperty(game) ? gameColorMap[game] : '#FFFFFF';
+    return {
+      label: game,
+      data: [],
+      backgroundColor: backgroundColor,
+    };
+  });
 
   if (isYearly) {
     periodLabel = "Month of Year";
