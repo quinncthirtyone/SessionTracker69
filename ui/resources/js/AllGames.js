@@ -92,13 +92,16 @@ $(document).ready(function () {
         searching: true,
     });
 
+    const safeTotalGameCount = DOMPurify.sanitize(gamesData.totalGameCount);
+    const safeTotalPlaytime = DOMPurify.sanitize(gamesData.totalPlaytime);
+
     $("#games-table_wrapper")[0].insertAdjacentHTML(
         "afterbegin",
-        '<div id="AllGames">All Games\n' + gamesData.totalGameCount + '</div>'
+        `<div id="AllGames">All Games\n${safeTotalGameCount}</div>`
     );
     $("#games-table_wrapper")[0].insertAdjacentHTML(
         "afterbegin",
-        '<div id="TotalPlaytime">Total Playtime\n' + gamesData.totalPlaytime + '</div>'
+        `<div id="TotalPlaytime">Total Playtime\n${safeTotalPlaytime}</div>`
     );
 
     document
