@@ -17,7 +17,8 @@ $FinalHTML = $ManualTemplate -replace "_MARKDOWN_HTML_", $ManualHTML
 
 Get-ChildItem .\ui\resources\images\ -Exclude default.png, dropped.png, pc.png, 404.png, 404-tutorial.gif, forever.png, hold.png, finished.png, playing.png, favicon.ico | Remove-Item
 
-$SourceFiles = ".\Install.bat", ".\modules", ".\icons", ".\ui"
+# We now include the main .ps1 script directly in the build
+$SourceFiles = ".\Install.bat", ".\modules", ".\icons", ".\ui", ".\SessionTracker.ps1"
 
 Copy-Item -Recurse -Path $SourceFiles -Destination .\build\SessionTracker\ -Force
 
@@ -27,7 +28,7 @@ foreach ($fileName in $fileNames) {
     Copy-Item -Path .\ui\404.html -Destination .\build\SessionTracker\ui\$fileName -Force
 }
 
-ps12exe -inputFile ".\SessionTracker.ps1" -outputFile ".\build\SessionTracker\SessionTracker.exe"
+# The ps12exe compilation step has been removed.
 
 Compress-Archive -Force -Path .\build\SessionTracker -DestinationPath .\build\SessionTracker.zip
 
