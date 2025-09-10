@@ -26,9 +26,8 @@ set "StartupPath=%APPDATA%\Microsoft\Windows\Start Menu\Programs\StartUp"
 set "StartMenuPath=%APPDATA%\Microsoft\Windows\Start Menu\Programs"
 set "IconPath=%InstallDirectory%\icons\running.ico"
 
-REM Quit SessionTracker if Already running
-echo Closing SessionTracker before installation
-taskkill /f /im SessionTracker.exe
+REM Quit SessionTracker if Already running (user should close manually)
+echo Please ensure SessionTracker is not running before installation.
 
 REM Cleanup Install directory before installation
 echo Cleaning install directory
@@ -42,7 +41,7 @@ del "%InstallDirectory%\Install.bat"
 REM Create shortcut using powershell and copy to desktop and start menu
 echo.
 echo Creating Shortcuts
-powershell.exe -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%InstallDirectory%\SessionTracker.lnk'); $Shortcut.TargetPath = '%InstallDirectory%\SessionTracker.exe'; $Shortcut.WorkingDirectory = '%InstallDirectory%'; $Shortcut.WindowStyle = 7; $Shortcut.Save()"
+powershell.exe -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%InstallDirectory%\SessionTracker.lnk'); $Shortcut.TargetPath = 'powershell.exe'; $Shortcut.Arguments = '-ExecutionPolicy Bypass -WindowStyle Hidden -File ""%InstallDirectory%\SessionTracker.ps1""'; $Shortcut.WorkingDirectory = '%InstallDirectory%'; $Shortcut.IconLocation = '%InstallDirectory%\icons\running.ico'; $Shortcut.Save()"
 copy "%InstallDirectory%\SessionTracker.lnk" "%DesktopPath%"
 copy "%InstallDirectory%\SessionTracker.lnk" "%StartMenuPath%"
 
