@@ -240,15 +240,17 @@ function updatePCStatsSection(pcData) {
   // to prevent Codacy from triggering false positives for XSS attack vulnerabilities.
   $("#pc-icon").html(DOMPurify.sanitize(`<img src="${pcData.iconPath}">`));
 
-  $("#pc-in-use").html(DOMPurify.sanitize("<b>In Use: </b>" + pcData.start_date + " - " + pcData.end_date));
   if (pcData.current == "TRUE") {
-    $("#pc-in-use").html(DOMPurify.sanitize("<b>In Use: </b>" + pcData.start_date + " - Present"));
+    $("#pc-in-use").html(`<b>In Use: </b> ${DOMPurify.sanitize(pcData.start_date)} - Present`);
+  }
+  else {
+    $("#pc-in-use").html(`<b>In Use: </b> ${DOMPurify.sanitize(pcData.start_date)} - ${DOMPurify.sanitize(pcData.end_date)}`);
   }
 
-  $("#pc-lifespan").html(DOMPurify.sanitize("<b>Lifespan: </b>" + pcData.age));
-  $("#pc-price").html(DOMPurify.sanitize("<b>Price: </b>" + pcData.currency + pcData.cost));
-  $("#pc-hours").html(DOMPurify.sanitize("<b>Hours Logged: </b>" + pcData.totalHours + "<sup> ✞</sup>"));
-  $("#pc-running-cost").html(DOMPurify.sanitize("<b>Running Cost: </b>" + pcData.currency + valuePerHour + "/Hour | " + pcData.currency + valuePerMonth + "/Month"));
+  $("#pc-lifespan").html(`<b>Lifespan: </b> ${DOMPurify.sanitize(pcData.age)}`);
+  $("#pc-price").html(`<b>Price: </b> ${DOMPurify.sanitize(pcData.currency)}${DOMPurify.sanitize(pcData.cost)}`);
+  $("#pc-hours").html(`<b>Hours Logged: </b> ${DOMPurify.sanitize(String(pcData.totalHours))}<sup> ✞</sup>`);
+  $("#pc-running-cost").html(`<b>Running Cost: </b> ${DOMPurify.sanitize(pcData.currency)}${DOMPurify.sanitize(valuePerHour)}/Hour | ${DOMPurify.sanitize(pcData.currency)}${DOMPurify.sanitize(valuePerMonth)}/Month`);
 }
 
 function updateAnnualHoursChart() {
