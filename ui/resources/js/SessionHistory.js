@@ -36,7 +36,7 @@ $(document).ready(function() {
         const row = $('<tr>').attr('data-session-id', session.Id);
         const gameCell = $('<td>').addClass(gameCellClass);
         const gameCellDiv = $('<div>').addClass('game-cell');
-        const gameIcon = $('<img>').addClass('game-icon').attr('src', safeIconPath).on('error', function() { this.onerror=null; this.src='resources/images/default.png'; });
+        const gameIcon = $('<img>').addClass('game-icon').attr('src', safeIconPath).attr('onerror', "this.onerror=null;this.src='resources/images/default.png';");
         const gameNameSpan = $('<span>').text(safeGameName);
         gameCellDiv.append(gameIcon, gameNameSpan);
         gameCell.append(gameCellDiv);
