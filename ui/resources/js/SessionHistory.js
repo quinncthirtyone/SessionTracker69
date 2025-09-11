@@ -1,4 +1,4 @@
-/* global DOMPurify */
+/* global DOMPurify, sessionData, profileData */
 $(document).ready(function() {
     // This script initializes the DataTable for the session history page,
     // making the table of recent sessions sortable and searchable.
