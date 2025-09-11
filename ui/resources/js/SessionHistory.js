@@ -25,45 +25,95 @@ $(document).ready(function() {
         const safeEndTime = DOMPurify.sanitize(session.EndTime);
         const safeType = DOMPurify.sanitize(session.Type);
 
-        let actionsCell = '<td class="action-buttons">';
-        actionsCell += '<div class="original-actions">';
-        actionsCell += `<button class="edit-button" data-session-id="${session.Id}">Edit</button>`;
+        const row = document.createElement('tr');
+        row.dataset.sessionId = session.Id;
 
-        let gameCellClass = '';
+        // Game Cell
+        const gameCell = document.createElement('td');
         if (safeType === 'Idle') {
-            gameCellClass = 'idle-session';
-            actionsCell += `<button class="convert-idle-button" data-session-id="${session.Id}">Convert to Active</button>`;
-            actionsCell += `<button class="delete-idle-button" data-session-id="${session.Id}">Delete</button>`;
+            gameCell.className = 'idle-session';
+        } else {
+            gameCell.className = 'active-session';
+        }
+
+        const gameCellDiv = document.createElement('div');
+        gameCellDiv.className = 'game-cell';
+
+        const gameIcon = document.createElement('img');
+        gameIcon.src = safeIconPath;
+        gameIcon.className = 'game-icon';
+        gameIcon.onerror = function() { this.onerror=null; this.src='resources/images/default.png'; };
+        gameCellDiv.appendChild(gameIcon);
+
+        const gameNameSpan = document.createElement('span');
+        gameNameSpan.textContent = safeGameName;
+        gameCellDiv.appendChild(gameNameSpan);
+        gameCell.appendChild(gameCellDiv);
+        row.appendChild(gameCell);
+
+        // Data Cells
+        const durationCell = document.createElement('td');
+        durationCell.textContent = safeDuration;
+        row.appendChild(durationCell);
+
+        const startDateCell = document.createElement('td');
+        startDateCell.textContent = safeStartDate;
+        row.appendChild(startDateCell);
+
+        const startTimeCell = document.createElement('td');
+        startTimeCell.textContent = safeStartTime;
+        row.appendChild(startTimeCell);
+
+        const endTimeCell = document.createElement('td');
+        endTimeCell.textContent = safeEndTime;
+        row.appendChild(endTimeCell);
+
+        // Actions Cell
+        const actionsCell = document.createElement('td');
+        actionsCell.className = 'action-buttons';
+
+        const originalActionsDiv = document.createElement('div');
+        originalActionsDiv.className = 'original-actions';
+
+        const editButton = document.createElement('button');
+        editButton.className = 'edit-button';
+        editButton.dataset.sessionId = session.Id;
+        editButton.textContent = 'Edit';
+        originalActionsDiv.appendChild(editButton);
+
+        if (safeType === 'Idle') {
+            const convertButton = document.createElement('button');
+            convertButton.className = 'convert-idle-button';
+            convertButton.dataset.sessionId = session.Id;
+            convertButton.textContent = 'Convert to Active';
+            originalActionsDiv.appendChild(convertButton);
+
+            const deleteIdleButton = document.createElement('button');
+            deleteIdleButton.className = 'delete-idle-button';
+            deleteIdleButton.dataset.sessionId = session.Id;
+            deleteIdleButton.textContent = 'Delete';
+            originalActionsDiv.appendChild(deleteIdleButton);
         } else { // Active session
-            gameCellClass = 'active-session';
             if (profileData.length > 1 && currentProfileId) {
                 const otherProfile = profileData.find(p => p.id !== currentProfileId);
                 if (otherProfile) {
-                    actionsCell += `<button class="switch-profile-button" data-session-id="${session.Id}" data-new-profile-id="${otherProfile.id}">Switch to ${otherProfile.name}</button>`;
+                    const switchProfileButton = document.createElement('button');
+                    switchProfileButton.className = 'switch-profile-button';
+                    switchProfileButton.dataset.sessionId = session.Id;
+                    switchProfileButton.dataset.newProfileId = otherProfile.id;
+                    switchProfileButton.textContent = `Switch to ${otherProfile.name}`;
+                    originalActionsDiv.appendChild(switchProfileButton);
                 }
             }
-            actionsCell += `<button class="delete-button" data-session-id="${session.Id}">Delete</button>`;
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete-button';
+            deleteButton.dataset.sessionId = session.Id;
+            deleteButton.textContent = 'Delete';
+            originalActionsDiv.appendChild(deleteButton);
         }
-        actionsCell += '</div>'; // close original-actions
-        actionsCell += '</td>';
+        actionsCell.appendChild(originalActionsDiv);
+        row.appendChild(actionsCell);
 
-
-        // Create the HTML for the new table row
-        const row = `
-            <tr data-session-id="${session.Id}">
-                <td class="${gameCellClass}">
-                    <div class="game-cell">
-                        <img src="${safeIconPath}" class="game-icon" onerror="this.onerror=null;this.src='resources/images/default.png';">
-                        <span>${safeGameName}</span>
-                    </div>
-                </td>
-                <td>${safeDuration}</td>
-                <td>${safeStartDate}</td>
-                <td>${safeStartTime}</td>
-                <td>${safeEndTime}</td>
-                ${actionsCell}
-            </tr>
-        `;
         // Append the new row to the table body
         tableBody.append(row);
     });
