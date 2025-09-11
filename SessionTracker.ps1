@@ -283,11 +283,11 @@ try {
     $AppNotifyIcon.ContextMenuStrip = $appContextMenu
 
     $profileClickHandler = {
-        param($sender, $e)
-        $profileId = $sender.Tag
+        param($clickedItem, $e)
+        $profileId = $clickedItem.Tag
         Set-ActiveProfile $profileId
         Set-RunningIcon
-        $AppNotifyIcon.ShowBalloonTip(3000, "Profile Switched", "Switched to $($sender.Text).", [System.Windows.Forms.ToolTipIcon]::Info)
+        $AppNotifyIcon.ShowBalloonTip(3000, "Profile Switched", "Switched to $($clickedItem.Text).", [System.Windows.Forms.ToolTipIcon]::Info)
     }
 
     $appContextMenu.Add_Opening({
@@ -295,11 +295,11 @@ try {
             $profiles = Get-Profiles
             $activeProfileId = Get-ActiveProfile
 
-            foreach ($profile in $profiles) {
-                $profileMenuItem = CreateMenuItem $profile.name
-                $profileMenuItem.Tag = $profile.id
+            foreach ($profileEntry in $profiles) {
+                $profileMenuItem = CreateMenuItem $profileEntry.name
+                $profileMenuItem.Tag = $profileEntry.id
 
-                if ($profile.id -eq $activeProfileId) {
+                if ($profileEntry.id -eq $activeProfileId) {
                     $profileMenuItem.Checked = $true
                     $profileMenuItem.Enabled = $false
                 }
