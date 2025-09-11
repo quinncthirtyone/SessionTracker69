@@ -1,5 +1,4 @@
-/*global ChartDataLabels, Chart, chartTitleConfig, gamingData, Log2Axis*/
-/*from chart.js, common.js and html template*/
+/* global Chart, ChartDataLabels, Log2Axis, gamingData, chartTitleConfig */
 
 let selectedYear;
 let selectedMonth;
@@ -34,12 +33,12 @@ function processDataForChart(targetYear, targetMonth, isYearly) {
   const labels = [];
   const games = [...new Set(filteredData.map(d => d.game_name))];
   const colors = [...new Set(filteredData.map(d => d.color_hex))];
-  const gameColorMap = Object.fromEntries(games.map((g, i) => [g, colors[i]]));
+  const gameColorMap = new Map(games.map((g, i) => [g, colors[i]]));
 
   const datasets = games.map(game => ({
     label: game,
     data: [],
-    backgroundColor: gameColorMap[game],
+    backgroundColor: gameColorMap.get(game),
   }));
 
   if (isYearly) {

@@ -1,3 +1,4 @@
+/* global DOMPurify */
 $(document).ready(function() {
     // This script initializes the DataTable for the session history page,
     // making the table of recent sessions sortable and searchable.
@@ -24,31 +25,15 @@ $(document).ready(function() {
         const safeEndTime = DOMPurify.sanitize(session.EndTime);
         const safeType = DOMPurify.sanitize(session.Type);
 
-        let actionsCell = '<td class="action-buttons">';
-        actionsCell += '<div class="original-actions">';
-        actionsCell += `<button class="edit-button" data-session-id="${session.Id}">Edit</button>`;
-
         let gameCellClass = '';
         if (safeType === 'Idle') {
             gameCellClass = 'idle-session';
-            actionsCell += `<button class="convert-idle-button" data-session-id="${session.Id}">Convert to Active</button>`;
-            actionsCell += `<button class="delete-idle-button" data-session-id="${session.Id}">Delete</button>`;
         } else { // Active session
             gameCellClass = 'active-session';
-            if (profileData.length > 1 && currentProfileId) {
-                const otherProfile = profileData.find(p => p.id !== currentProfileId);
-                if (otherProfile) {
-                    actionsCell += `<button class="switch-profile-button" data-session-id="${session.Id}" data-new-profile-id="${otherProfile.id}">Switch to ${otherProfile.name}</button>`;
-                }
-            }
-            actionsCell += `<button class="delete-button" data-session-id="${session.Id}">Delete</button>`;
         }
-        actionsCell += '</div>'; // close original-actions
-        actionsCell += '</td>';
-
 
         // Create the HTML for the new table row
-        const row = `
+        const row = $(`
             <tr data-session-id="${session.Id}">
                 <td class="${gameCellClass}">
                     <div class="game-cell">
@@ -60,9 +45,29 @@ $(document).ready(function() {
                 <td>${safeStartDate}</td>
                 <td>${safeStartTime}</td>
                 <td>${safeEndTime}</td>
-                ${actionsCell}
             </tr>
-        `;
+        `);
+
+        const actionsCell = $('<td class="action-buttons"></td>');
+        const originalActions = $('<div class="original-actions"></div>');
+        originalActions.append($('<button class="edit-button">Edit</button>').attr('data-session-id', session.Id));
+
+        if (safeType === 'Idle') {
+            originalActions.append($('<button class="convert-idle-button">Convert to Active</button>').attr('data-session-id', session.Id));
+            originalActions.append($('<button class="delete-idle-button">Delete</button>').attr('data-session-id', session.Id));
+        } else { // Active session
+            if (profileData.length > 1 && currentProfileId) {
+                const otherProfile = profileData.find(p => p.id !== currentProfileId);
+                if (otherProfile) {
+                    originalActions.append($(`<button class="switch-profile-button">Switch to ${otherProfile.name}</button>`).attr('data-session-id', session.Id).attr('data-new-profile-id', otherProfile.id));
+                }
+            }
+            originalActions.append($('<button class="delete-button">Delete</button>').attr('data-session-id', session.Id));
+        }
+
+        actionsCell.append(originalActions);
+        row.append(actionsCell);
+
         // Append the new row to the table body
         tableBody.append(row);
     });
@@ -179,7 +184,7 @@ $(document).ready(function() {
         const minutes = parseInt(row.find('.duration-minutes-input').val(), 10) || 0;
         const newDuration = (hours * 60) + minutes;
 
-        fetch(`http://localhost:8088/update-session`, {
+        fetch(`/update-session`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -215,7 +220,7 @@ $(document).ready(function() {
     $('#sessionHistoryTable').on('click', '.delete-button', function() {
         const sessionId = $(this).data('session-id');
         if (confirm('Are you sure you want to delete this session?')) {
-            fetch(`http://localhost:8088/remove-session/${sessionId}`)
+            fetch(`/remove-session/${sessionId}`)
                 .then(() => location.reload());
         }
     });
@@ -224,7 +229,7 @@ $(document).ready(function() {
         const sessionId = $(this).data('session-id');
         const newProfileId = $(this).data('new-profile-id');
         if (confirm(`Are you sure you want to switch this session to the other profile?`)) {
-            fetch(`http://localhost:8088/switch-session-profile/${sessionId}/${newProfileId}`)
+            fetch(`/switch-session-profile/${sessionId}/${newProfileId}`)
                 .then(() => location.reload());
         }
     });
@@ -232,7 +237,7 @@ $(document).ready(function() {
     $('#sessionHistoryTable').on('click', '.convert-idle-button', function() {
         const sessionId = $(this).data('session-id');
         if (confirm('Are you sure you want to convert this idle session to active time?')) {
-            fetch(`http://localhost:8088/convert-idle-session/${sessionId}`)
+            fetch(`/convert-idle-session/${sessionId}`)
                 .then(() => location.reload());
         }
     });
@@ -240,7 +245,7 @@ $(document).ready(function() {
     $('#sessionHistoryTable').on('click', '.delete-idle-button', function() {
         const sessionId = $(this).data('session-id');
         if (confirm('Are you sure you want to delete this idle session?')) {
-            fetch(`http://localhost:8088/delete-idle-session/${sessionId}`)
+            fetch(`/delete-idle-session/${sessionId}`)
                 .then(() => location.reload());
         }
     });

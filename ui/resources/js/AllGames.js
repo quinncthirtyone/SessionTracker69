@@ -1,3 +1,4 @@
+/* global DOMPurify */
 $(document).ready(function () {
     const tableBody = $('#games-table tbody');
 
@@ -95,14 +96,20 @@ $(document).ready(function () {
     const safeTotalGameCount = DOMPurify.sanitize(gamesData.totalGameCount);
     const safeTotalPlaytime = DOMPurify.sanitize(gamesData.totalPlaytime);
 
-    $("#games-table_wrapper")[0].insertAdjacentHTML(
-        "afterbegin",
-        `<div id="AllGames">All Games\n${safeTotalGameCount}</div>`
-    );
-    $("#games-table_wrapper")[0].insertAdjacentHTML(
-        "afterbegin",
-        `<div id="TotalPlaytime">Total Playtime\n${safeTotalPlaytime}</div>`
-    );
+    const wrapper = $("#games-table_wrapper");
+
+    const totalPlaytimeDiv = $("<div>", {
+        id: "TotalPlaytime",
+        text: `Total Playtime\n${safeTotalPlaytime}`
+    });
+
+    const allGamesDiv = $("<div>", {
+        id: "AllGames",
+        text: `All Games\n${safeTotalGameCount}`
+    });
+
+    wrapper.prepend(allGamesDiv);
+    wrapper.prepend(totalPlaytimeDiv);
 
     document
         .getElementById("Toggle-Pagination")
