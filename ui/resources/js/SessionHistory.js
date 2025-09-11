@@ -33,20 +33,20 @@ $(document).ready(function() {
         }
 
         // Create the HTML for the new table row
-        const row = $(`
-            <tr data-session-id="${session.Id}">
-                <td class="${gameCellClass}">
-                    <div class="game-cell">
-                        <img src="${safeIconPath}" class="game-icon" onerror="this.onerror=null;this.src='resources/images/default.png';">
-                        <span>${safeGameName}</span>
-                    </div>
-                </td>
-                <td>${safeDuration}</td>
-                <td>${safeStartDate}</td>
-                <td>${safeStartTime}</td>
-                <td>${safeEndTime}</td>
-            </tr>
-        `);
+        const row = $('<tr>').attr('data-session-id', session.Id);
+        const gameCell = $('<td>').addClass(gameCellClass);
+        const gameCellDiv = $('<div>').addClass('game-cell');
+        const gameIcon = $('<img>').addClass('game-icon').attr('src', safeIconPath).on('error', function() { this.onerror=null; this.src='resources/images/default.png'; });
+        const gameNameSpan = $('<span>').text(safeGameName);
+        gameCellDiv.append(gameIcon, gameNameSpan);
+        gameCell.append(gameCellDiv);
+
+        const durationCell = $('<td>').text(safeDuration);
+        const startDateCell = $('<td>').text(safeStartDate);
+        const startTimeCell = $('<td>').text(safeStartTime);
+        const endTimeCell = $('<td>').text(safeEndTime);
+
+        row.append(gameCell, durationCell, startDateCell, startTimeCell, endTimeCell);
 
         const actionsCell = $('<td class="action-buttons"></td>');
         const originalActions = $('<div class="original-actions"></div>');

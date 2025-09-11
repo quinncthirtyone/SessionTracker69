@@ -33,12 +33,17 @@ function processDataForChart(targetYear, targetMonth, isYearly) {
   const labels = [];
   const games = [...new Set(filteredData.map(d => d.game_name))];
   const colors = [...new Set(filteredData.map(d => d.color_hex))];
-  const gameColorMap = new Map(games.map((g, i) => [g, colors[i]]));
+  const gameColorMap = games.reduce((acc, game, i) => {
+    if (game !== '__proto__') {
+      acc[game] = colors[i];
+    }
+    return acc;
+  }, {});
 
   const datasets = games.map(game => ({
     label: game,
     data: [],
-    backgroundColor: gameColorMap.get(game),
+    backgroundColor: gameColorMap[game],
   }));
 
   if (isYearly) {
