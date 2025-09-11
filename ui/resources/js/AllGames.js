@@ -1,4 +1,4 @@
-/* global DOMPurify */
+/* global DOMPurify, gamesData */
 $(document).ready(function () {
     const tableBody = $('#games-table tbody');
 
