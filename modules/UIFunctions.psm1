@@ -794,7 +794,7 @@ function RenderQuickView() {
         $dataGridView.Columns.Clear()
 
         $profileId = Get-ActiveProfile
-        $mostPlayedQuery = "SELECT g.name, g.icon, gs.play_time, gs.last_play_date FROM games g JOIN game_stats gs ON g.id = gs.game_id WHERE gs.profile_id = {0} ORDER BY gs.play_time DESC LIMIT 5" -f $profileId
+        $mostPlayedQuery = "SELECT g.name, g.icon, SUM(sh.session_duration_minutes) as play_time, MAX(sh.session_start_time) as last_play_date FROM games g JOIN session_history sh ON g.name = sh.game_name WHERE sh.profile_id = $profileId GROUP BY g.name, g.icon ORDER BY play_time DESC LIMIT 5"
         $gameRecords = RunDBQuery $mostPlayedQuery
         if ($gameRecords.Length -eq 0) {
             $dataGridView.Columns.Clear()
