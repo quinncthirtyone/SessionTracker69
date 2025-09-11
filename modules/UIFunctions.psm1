@@ -746,7 +746,7 @@ function RenderQuickView() {
     }
 
     function Load-RecentSessions {
-        $quickViewForm.text = "Recent Sessions"
+        $quickViewForm.text = "SessionTracker"
         $toggleSwitch.Text = "Show Most Played"
         $dataGridView.Rows.Clear()
         $dataGridView.Columns.Clear()
@@ -788,7 +788,7 @@ function RenderQuickView() {
     }
 
     function Load-MostPlayed {
-        $quickViewForm.text = "Most Played Games"
+        $quickViewForm.text = "SessionTracker"
         $toggleSwitch.Text = "Show Recent Sessions"
         $dataGridView.Rows.Clear()
         $dataGridView.Columns.Clear()

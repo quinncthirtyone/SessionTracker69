@@ -495,9 +495,14 @@ try {
     $Timer.Start()
 
     Log "Hiding powershell window"
+    $mainWindowHandle = (Get-Process -PID $pid).MainWindowHandle
+    $setWindowTextSignature = '[DllImport("user32.dll", CharSet = CharSet.Auto)] public static extern int SetWindowText(IntPtr hWnd, string text);'
+    $setWindowText = Add-Type -MemberDefinition $setWindowTextSignature -Name "Win32SetWindowText" -Namespace "Win32Functions" -PassThru
+    $null = $setWindowText::SetWindowText($mainWindowHandle, "SessionTracker")
+
     $windowCode = '[DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);'
     $asyncWindow = Add-Type -MemberDefinition $windowCode -name Win32ShowWindowAsync -namespace Win32Functions -PassThru
-    $null = $asyncWindow::ShowWindowAsync((Get-Process -PID $pid).MainWindowHandle, 0)
+    $null = $asyncWindow::ShowWindowAsync($mainWindowHandle, 0)
 
     Log "Informing user of successful application launch."
     $AppNotifyIcon.ShowBalloonTip(3000, "App Launched", "Use tray icon menu for all operations.", [System.Windows.Forms.ToolTipIcon]::Info)
