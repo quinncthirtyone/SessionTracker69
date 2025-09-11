@@ -74,7 +74,19 @@ function TimeTrackerLoop($DetectedExe, $IdleDetectionEnabled, $GameName) {
     $totalIdleTimeForCurrentSession = 0
     $exeStartTime = ($null = [System.Diagnostics.Process]::GetProcessesByName($DetectedExe)).StartTime | Sort-Object | Select-Object -First 1
 
-    while ($null = [System.Diagnostics.Process]::GetProcessesByName($DetectedExe)) {
+    while ($true) {
+        try {
+            if (-not ([System.Diagnostics.Process]::GetProcessesByName($DetectedExe))) {
+                # Process not running, exit loop
+                break
+            }
+        }
+        catch {
+            # Handle potential exceptions when process is in a weird state
+            Log "Error getting process $DetectedExe. Assuming it has exited. $($_.Exception.Message)"
+            break
+        }
+
         $playTimeForCurrentSession = [int16] (New-TimeSpan -Start $exeStartTime).TotalMinutes
 
         if ($IdleDetectionEnabled) {
@@ -94,7 +106,7 @@ function TimeTrackerLoop($DetectedExe, $IdleDetectionEnabled, $GameName) {
                     $playTimeForCurrentSession = [int16] (New-TimeSpan -Start $exeStartTime).TotalMinutes
                     Set-Itemproperty -path $hwInfoSensorSession -Name 'Value' -value $playTimeForCurrentSession
 
-                    Start-Sleep -s 5
+                    Start-Sleep -s 10
                 }
                 # Exited Idle Session, record it
                 Add-IdleSession -GameName $GameName -SessionStartTime $idleSessionStartTimeUnix -SessionDuration $idleSessionDuration
@@ -103,7 +115,7 @@ function TimeTrackerLoop($DetectedExe, $IdleDetectionEnabled, $GameName) {
         }
 
         Set-Itemproperty -path $hwInfoSensorSession -Name 'Value' -value $playTimeForCurrentSession
-        Start-Sleep -s 5
+        Start-Sleep -s 10
     }
 
     Log "Play time for current session: $playTimeForCurrentSession min. Idle time for current session: $totalIdleTimeForCurrentSession min."
