@@ -1,3 +1,4 @@
+/* global DOMPurify */
 $(document).ready(function () {
     const tableBody = $('#games-table tbody');
 
