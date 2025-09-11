@@ -92,8 +92,8 @@ function UpdateAllStatsInBackground() {
         return
     }
 
-    foreach ($profile in $profilesToProcess) {
-        Set-ActiveProfile $profile.id
+    foreach ($profileToProcess in $profilesToProcess) {
+        Set-ActiveProfile $profileToProcess.id
         RenderGameList -InBackground $true
         RenderSummary -InBackground $true
         RenderGamingTime -InBackground $true
