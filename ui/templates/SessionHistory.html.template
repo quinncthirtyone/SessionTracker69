@@ -7,8 +7,8 @@
       type="image/x-icon"
       href="./resources/images/favicon.ico"
     />
-    <link rel="stylesheet" href="./resources/css/SessionHistory.css" />
     <link rel="stylesheet" href="./resources/css/jquery.dataTables.css" />
+    <link rel="stylesheet" href="./resources/css/SessionHistory.css" />
     <link rel="stylesheet" href="./resources/css/ProfileSwitcher.css" />
     <script src="./resources/js/jquery-3.7.1.min.js"></script>
     <script src="./resources/js/jquery.dataTables.min.js"></script>

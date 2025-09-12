@@ -36,9 +36,9 @@
       <button class="custom-button" id="prev-button">&#11164;</button>
       <div id="time-period-display"></div>
       <button class="custom-button" id="next-button">&#11166;</button>
+      <button class="custom-button" id="period-button">Yearly Summary</button>
     </div>
     <div id="warn-msg"></div>
-    <button class="custom-button" id="period-button">Yearly Summary</button>
     <script>
       const gamingData = _GAMINGDATA_;
     </script>

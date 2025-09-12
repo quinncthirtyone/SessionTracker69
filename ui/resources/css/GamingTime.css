@@ -13,13 +13,13 @@ body {
 
 #chart-container {
   width: 95%;
-  height: 75%;
+  height: 90%;
 }
 
 #chart-navigation-bar {
   display: flex;
   margin-top: 0.5%;
-  width: 500px;
+  width: 700px;
   justify-content: space-around;
   align-items: center;
   font-family: monospace;
@@ -31,10 +31,6 @@ body {
   font-family: monospace;
   font-size: 14px;
   height: 22px;
-}
-
-#period-button {
-  margin-top: 0.%;
 }
 
 #navigation-bar {

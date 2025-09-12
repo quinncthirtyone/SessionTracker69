@@ -142,7 +142,8 @@ body {
 
 #main-row {
   display: flex;
-  height: 72.5%;
+  height: 80%;
+  width: 100%;
   justify-content: space-around;
 }
 
