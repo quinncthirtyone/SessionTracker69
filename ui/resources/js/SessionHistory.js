@@ -123,7 +123,7 @@ $(document).ready(function() {
         // Set the default sort order to descending by date, then by time
         "order": [[ 2, "desc" ], [3, "desc"]],
         "pageLength": 15,
-        "dom": 'frtip',
+        "dom": '<"filter-container"f>rtip',
         "columnDefs": [
             // Define properties for each column
             { "targets": 0, "orderable": true, "searchable": true }, // Game

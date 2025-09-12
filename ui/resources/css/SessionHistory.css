@@ -89,22 +89,25 @@ td {
 
 
 /* Override default data table css styles */
-#DataTables_Table_0_filter {
-  float: left;
-  margin-top: 10px;
-  margin-bottom: 20px;
-  margin-left: 1.3%;
+.filter-container {
+  width: 97.5%;
+  margin: 0 auto;
 }
 
-#DataTables_Table_0_info {
+#sessionHistoryTable_filter {
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+
+#sessionHistoryTable_info {
   margin-left: 24px;
 }
 
-#DataTables_Table_0_paginate .disabled {
+#sessionHistoryTable_paginate .disabled {
   color: white !important;
 }
 
-#DataTables_Table_0_paginate {
+#sessionHistoryTable_paginate {
   margin-right: 24px;
 }
 
