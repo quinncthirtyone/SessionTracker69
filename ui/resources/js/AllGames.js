@@ -88,9 +88,9 @@ $(document).ready(function () {
         ],
         ordering: true,
         paging: "numbers",
-        pageLength: 9,
+        pageLength: 10,
         lengthChange: false,
-        searching: true,
+        searching: true
     });
 
     const safeTotalGameCount = DOMPurify.sanitize(gamesData.totalGameCount);
@@ -105,20 +105,6 @@ $(document).ready(function () {
     totalPlaytimeDiv.id = "TotalPlaytime";
     totalPlaytimeDiv.textContent = `Total Playtime\n${safeTotalPlaytime}`;
     $("#games-table_wrapper")[0].prepend(totalPlaytimeDiv);
-
-    document
-        .getElementById("Toggle-Pagination")
-        .addEventListener("click", () => {
-        if ($("table").DataTable().page.len() === 9) {
-            document.getElementById("Toggle-Pagination").innerText =
-            "Paginate";
-            $("table").DataTable().page.len(-1).draw();
-        } else {
-            document.getElementById("Toggle-Pagination").innerText =
-            "Show All";
-            $("table").DataTable().page.len(9).draw();
-        }
-    });
 
     $("#games-table-container").show();
 });

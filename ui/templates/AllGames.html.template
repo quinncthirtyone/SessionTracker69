@@ -31,9 +31,6 @@
         </tbody>
       </table>
     </div>
-    <div id="button-container">
-      <button class="custom-button" id="Toggle-Pagination">Show All</button>
-    </div>
     <script>
       const gamesData = _GAMESDATA_;
     </script>
