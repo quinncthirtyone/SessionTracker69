@@ -41,7 +41,7 @@ del "%InstallDirectory%\Install.bat"
 REM Create shortcut using powershell and copy to desktop and start menu
 echo.
 echo Creating Shortcuts
-powershell.exe -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%InstallDirectory%\SessionTracker.lnk'); $Shortcut.TargetPath = 'powershell.exe'; $Shortcut.Arguments = '-ExecutionPolicy Bypass -WindowStyle Hidden -File ""%InstallDirectory%\SessionTracker.ps1""'; $Shortcut.WorkingDirectory = '%InstallDirectory%'; $Shortcut.IconLocation = '%InstallDirectory%\icons\running.ico'; $Shortcut.Save()"
+powershell.exe -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%InstallDirectory%\SessionTracker.lnk'); $Shortcut.TargetPath = '%InstallDirectory%\SessionTracker.exe'; $Shortcut.WorkingDirectory = '%InstallDirectory%'; $Shortcut.IconLocation = '%InstallDirectory%\icons\running.ico'; $Shortcut.Save()"
 copy "%InstallDirectory%\SessionTracker.lnk" "%DesktopPath%"
 copy "%InstallDirectory%\SessionTracker.lnk" "%StartMenuPath%"
 
