@@ -28,8 +28,14 @@ foreach ($fileName in $fileNames) {
     Copy-Item -Path .\ui\404.html -Destination .\build\SessionTracker\ui\$fileName -Force
 }
 
-# The ps12exe compilation step has been removed.
+# Compile the PowerShell script to an executable
+if (-not (Get-Module -ListAvailable -Name ps2exe)) {
+    Write-Host "ps2exe module not found. Installing..."
+    Install-Module ps2exe -Force -Scope CurrentUser
+}
+Invoke-ps2exe -inputFile ".\build\SessionTracker\SessionTracker.ps1" -outputFile ".\build\SessionTracker\SessionTracker.exe" -iconFile ".\build\SessionTracker\icons\running.ico" -noConsole
+Remove-Item ".\build\SessionTracker\SessionTracker.ps1"
 
-Compress-Archive -Force -Path .\build\SessionTracker -DestinationPath .\build\SessionTracker.zip
+Compress-Archive -Force -Path .\build\SessionTracker\* -DestinationPath .\build\SessionTracker.zip
 
 Remove-Item -Recurse .\build\SessionTracker
