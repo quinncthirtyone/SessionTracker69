@@ -10,17 +10,17 @@ A lightweight PowerShell-based tray application for Windows that tracks time spe
 
 ## Features
 - #### Time and Session Tracking
-    - Tracks play time for PC or emulated games.
-    - **Session Tracking (including idle sessions)**
+    - **Tracks play time** for PC or emulated games.
+    - **Session Tracking** (including idle sessions)
     - **Toggleable idle detection** to automatically pause tracking during inactivity.
-    - Tracks new roms after registering any emulator.
-    - HWiNFO64 integration to display session time and tracking status in its sensor panel.
+    - **Emulator compatability** for an extensive games library
+    - **HWiNFO64 integration** to display session time and tracking status in its sensor panel.
 - #### Profiles and UI
     - **Dual profiles** for multiple users or configurations.
-    - **Simple and intuitive UI**.
-    - **Quick View function to look at recent sessions and overall playtime stats on demand**.
-    - Various detailed statistics and displays for gaming data.
-    - Game status to indicate if the user has finished a game or are still playing.
+    - **Simple and intuitive** html-based UI.
+    - **Quick View function** to look at recent sessions and overall playtime stats on demand.
+    - **Various detailed statistics** and displays for gaming data.
+    - **Game status** to indicate if the user has finished a game or are still playing.
 - #### Performance
     - It is a compact app with minimal effect on performance.
     - User data stored in a transferable .db file for continuity across different machines.
