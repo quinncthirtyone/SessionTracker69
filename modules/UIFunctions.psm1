@@ -686,6 +686,7 @@ function RenderQuickView() {
     $dataGridView.Enabled = $false
     $dataGridView.DefaultCellStyle.Padding = New-Object System.Windows.Forms.Padding(2, 2, 2, 2)
     $dataGridView.DefaultCellStyle.BackColor = [System.Drawing.Color]::FromArgb(240, 240, 240)
+    $dataGridView.AlternatingRowsDefaultCellStyle.BackColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
 
     $doubleBufferProperty = $dataGridView.GetType().GetProperty('DoubleBuffered', [System.Reflection.BindingFlags]::NonPublic -bor [System.Reflection.BindingFlags]::Instance)
     $doubleBufferProperty.SetValue($dataGridView, $true, $null)
@@ -773,7 +774,9 @@ function RenderQuickView() {
 
         foreach ($column in $dataGridView.Columns) {
             $column.Resizable = [System.Windows.Forms.DataGridViewTriState]::False
+            $column.DefaultCellStyle.Alignment = [System.Windows.Forms.DataGridViewContentAlignment]::MiddleCenter
         }
+        $dataGridView.Columns["name"].DefaultCellStyle.Alignment = [System.Windows.Forms.DataGridViewContentAlignment]::MiddleLeft
 
         foreach ($row in $sessionRecords) {
             $iconByteStream = [System.IO.MemoryStream]::new($row.icon)
@@ -815,7 +818,9 @@ function RenderQuickView() {
 
         foreach ($column in $dataGridView.Columns) {
             $column.Resizable = [System.Windows.Forms.DataGridViewTriState]::False
+            $column.DefaultCellStyle.Alignment = [System.Windows.Forms.DataGridViewContentAlignment]::MiddleCenter
         }
+        $dataGridView.Columns["name"].DefaultCellStyle.Alignment = [System.Windows.Forms.DataGridViewContentAlignment]::MiddleLeft
 
         foreach ($row in $gameRecords) {
             $iconByteStream = [System.IO.MemoryStream]::new($row.icon)
@@ -823,7 +828,7 @@ function RenderQuickView() {
             $minutes = $null; $hours = [math]::divrem($row.play_time, 60, [ref]$minutes);
             $playTimeFormatted = "{0} Hr {1} Min" -f $hours, $minutes
             [datetime]$origin = '1970-01-01 00:00:00'
-            $dateFormatted = $origin.AddSeconds($row.last_play_date).ToLocalTime().ToString("dd MMMM yyyy")
+            $dateFormatted = $origin.AddSeconds($row.last_play_date).ToLocalTime().ToString("dd MMM yyyy")
             $null = $dataGridView.Rows.Add($gameIcon, $row.name, $playTimeFormatted, $dateFormatted)
         }
         Resize-Form
