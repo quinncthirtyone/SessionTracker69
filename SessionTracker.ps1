@@ -14,7 +14,7 @@
 
 try {
     Import-Module ".\modules\PSSQLite" | Out-Null
-    Import-Module ".\modules\ThreadJob" | Out-Null
+    Import-Module ".\modules\ThreadJob\2.0.3\ThreadJob.psd1" | Out-Null
     Import-Module ".\modules\HelperFunctions.psm1" | Out-Null
     Import-Module ".\modules\QueryFunctions.psm1" | Out-Null
     Import-Module ".\modules\SettingsFunctions.psm1" | Out-Null
@@ -171,6 +171,7 @@ try {
     #------------------------------------------
     # Tracker Job Scripts
     $TrackerJobInitializationScript = {
+        Import-Module ".\modules\ThreadJob\2.0.3\ThreadJob.psd1";
         Import-Module ".\modules\PSSQLite";
         Import-Module ".\modules\HelperFunctions.psm1";
         Import-Module ".\modules\UIFunctions.psm1";
