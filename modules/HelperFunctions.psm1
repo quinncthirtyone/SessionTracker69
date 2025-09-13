@@ -249,11 +249,56 @@ function Get-DominantColor {
         $xStep = [Math]::Max(1, [Math]::Floor($bitmap.Width / 32))
         $yStep = [Math]::Max(1, [Math]::Floor($bitmap.Height / 32))
 
-        for ($y = 0; $y -lt $bitmap.Height; $y += $yStep) {
-            for ($x = 0; $x -lt $bitmap.Width; $x += $xStep) {
+        # Define a 10% margin to ignore edges
+        $xMargin = [Math]::Floor($bitmap.Width * 0.1)
+        $yMargin = [Math]::Floor($bitmap.Height * 0.1)
+        $xStart = $xMargin
+        $yStart = $yMargin
+        $xEnd = $bitmap.Width - $xMargin
+        $yEnd = $bitmap.Height - $yMargin
+
+        # --- First Pass: Strict filtering for vibrant colors ---
+        for ($y = $yStart; $y -lt $yEnd; $y += $yStep) {
+            for ($x = $xStart; $x -lt $xEnd; $x += $xStep) {
                 $pixelColor = $bitmap.GetPixel($x, $y)
-                # Ignore transparent or grayscale pixels to get a more vibrant color
-                if ($pixelColor.A -gt 128 -and ($pixelColor.R -ne $pixelColor.G -or $pixelColor.R -ne $pixelColor.B)) {
+
+                # Ignore transparent pixels
+                if ($pixelColor.A -le 128) { continue }
+
+                $r_ = $pixelColor.R
+                $g_ = $pixelColor.G
+                $b_ = $pixelColor.B
+
+                # Ignore greyscale/black/white values
+                $max = [Math]::Max($r_, [Math]::Max($g_, $b_))
+                $min = [Math]::Min($r_, [Math]::Min($g_, $b_))
+                if (($max - $min) -lt 20) { continue } # Near grey
+                if ($r_ -gt 230 -and $g_ -gt 230 -and $b_ -gt 230) { continue } # Near white
+                if ($r_ -lt 30 -and $g_ -lt 30 -and $b_ -lt 30) { continue } # Near black
+
+                # Quantize the color to group similar shades.
+                $r = $pixelColor.R -band 0xF0
+                $g = $pixelColor.G -band 0xF0
+                $b = $pixelColor.B -band 0xF0
+                $quantizedColor = ($r -shl 16) -bor ($g -shl 8) -bor $b
+
+                if ($colorCounts.ContainsKey($quantizedColor)) {
+                    $colorCounts[$quantizedColor]++
+                } else {
+                    $colorCounts[$quantizedColor] = 1
+                }
+            }
+        }
+
+        # --- Second Pass: If no colors found, run with loose filtering for monochromatic icons ---
+        if ($colorCounts.Count -eq 0) {
+            for ($y = $yStart; $y -lt $yEnd; $y += $yStep) {
+                for ($x = $xStart; $x -lt $xEnd; $x += $xStep) {
+                    $pixelColor = $bitmap.GetPixel($x, $y)
+
+                    # Ignore only transparent pixels
+                    if ($pixelColor.A -le 128) { continue }
+
                     # Quantize the color to group similar shades.
                     $r = $pixelColor.R -band 0xF0
                     $g = $pixelColor.G -band 0xF0
@@ -273,7 +318,7 @@ function Get-DominantColor {
         $memStream.Dispose()
 
         if ($colorCounts.Count -eq 0) {
-            # Default color if no suitable color is found
+            # Default color if no suitable color is found even after the second pass (e.g., fully transparent icon)
             return "#808080"
         }
 
