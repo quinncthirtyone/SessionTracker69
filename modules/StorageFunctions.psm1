@@ -133,6 +133,7 @@ function UpdateGameOnEdit() {
         [string]$GameName,
         [string]$GameExeName,
         [string]$GameIconPath,
+        [string]$GameColorHex,
         [string]$GameCompleteStatus,
         [string]$GamePlatform,
         [string]$GameStatus,
@@ -144,7 +145,10 @@ function UpdateGameOnEdit() {
 
     # Update shared game data
     $gameIconBytes = (Get-Content -Path $GameIconPath -Encoding byte -Raw);
-    $gameIconColor = Get-DominantColor $gameIconBytes
+    $gameIconColor = $GameColorHex
+    if ([string]::IsNullOrEmpty($GameColorHex)) {
+        $gameIconColor = Get-DominantColor $gameIconBytes
+    }
     $updateGameQuery = "UPDATE games SET name = @GameName, exe_name = @GameExeName, platform = @GamePlatform, icon = @gameIconBytes, color_hex = @GameIconColor, idle_detection = @GameIdleDetection WHERE id = $gameId"
     RunDBQuery $updateGameQuery @{
         GameName          = $GameName.Trim()

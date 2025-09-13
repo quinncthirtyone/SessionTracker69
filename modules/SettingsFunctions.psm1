@@ -15,6 +15,20 @@ function FilterListBox {
     }
 }
 
+function RenderColorPickerDialog($currentColor) {
+    $colorDialog = New-Object System.Windows.Forms.ColorDialog
+    $colorDialog.Color = [System.Drawing.ColorTranslator]::FromHtml($currentColor)
+    $colorDialog.AllowFullOpen = $true
+    $colorDialog.FullOpen = $true
+    $result = $colorDialog.ShowDialog()
+
+    if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+        $selectedColor = $colorDialog.Color
+        return ('#{0:X2}{1:X2}{2:X2}' -f $selectedColor.R, $selectedColor.G, $selectedColor.B)
+    }
+    return $null
+}
+
 function RenderEditGameForm($GamesList) {
 
     $workingDirectory = (Get-Location).Path
@@ -25,6 +39,7 @@ function RenderEditGameForm($GamesList) {
     # Hidden fields to save non user editable values
     $pictureBoxImagePath = CreateTextBox $imagePath 874 264 1 1; $pictureBoxImagePath.hide(); $editGameForm.Controls.Add($pictureBoxImagePath)
     $textOriginalGameName = CreateTextBox "" 874 264 1 1; $textOriginalGameName.hide(); $editGameForm.Controls.Add($textOriginalGameName)
+    $textGameColor = CreateTextBox "" 874 264 1 1; $textGameColor.hide(); $editGameForm.Controls.Add($textGameColor)
     # Hidden fields end
 
     $listBox = New-Object System.Windows.Forms.ListBox
@@ -56,7 +71,7 @@ function RenderEditGameForm($GamesList) {
 
     $labelPlayTime = Createlabel "PlayTime:" 170 140; $editGameForm.Controls.Add($labelPlayTime)
     $textPlayTime = CreateTextBox "" 245 140 200 20; $editGameForm.Controls.Add($textPlayTime)
-    $textPlayTime.Add_TextChanged($changeEventHandler)
+    $textPlayTime.ReadOnly = $true
 
     $checkboxCompleted = New-Object Windows.Forms.CheckBox
     $checkboxCompleted.Text = "Finished"
@@ -174,7 +189,10 @@ function RenderEditGameForm($GamesList) {
             $pictureBoxImagePath.Text = $imagePath
             $pictureBox.Image.Dispose()
             $pictureBox.Image = [System.Drawing.Image]::FromFile($imagePath)
-
+            $textGameColor.Text = $selectedGame.color_hex
+            $baseColor = [System.Drawing.ColorTranslator]::FromHtml($selectedGame.color_hex)
+            $buttonColorPicker.BackColor = $baseColor
+            $buttonColorPicker.FlatAppearance.MouseOverBackColor = [System.Windows.Forms.ControlPaint]::Light($baseColor)
         })
     $editGameForm.Controls.Add($listBox)
 
@@ -202,11 +220,28 @@ function RenderEditGameForm($GamesList) {
                 $pictureBoxImagePath.Text = $imagePath
                 $pictureBox.Image.Dispose()
                 $pictureBox.Image = [System.Drawing.Image]::FromFile($imagePath)
+                $textGameColor.Text = "" # Clear the manually selected color
                 $openFileDialog.Dispose()
                 $buttonOK.Enabled = $true
             }
         })
     $editGameForm.Controls.Add($buttonUpdateIcon)
+
+    $buttonColorPicker = CreateButton "" 182 190
+    $buttonColorPicker.Size = New-Object System.Drawing.Size(30, 23)
+    $buttonColorPicker.FlatStyle = 'flat'
+    $buttonColorPicker.FlatAppearance.BorderSize = 1
+    $buttonColorPicker.Add_Click({
+        $selectedColor = RenderColorPickerDialog -currentColor $textGameColor.Text
+        if ($null -ne $selectedColor) {
+            $textGameColor.Text = $selectedColor
+            $baseColor = [System.Drawing.ColorTranslator]::FromHtml($selectedColor)
+            $buttonColorPicker.BackColor = $baseColor
+            $buttonColorPicker.FlatAppearance.MouseOverBackColor = [System.Windows.Forms.ControlPaint]::Light($baseColor)
+            $buttonOK.Enabled = $true
+        }
+    })
+    $editGameForm.Controls.Add($buttonColorPicker)
 
     $buttonUpdateExe = CreateButton "Edit Exe" 470 60
     $buttonUpdateExe.Add_Click({
@@ -260,14 +295,6 @@ function RenderEditGameForm($GamesList) {
 
             $gameName = $textName.Text
 
-            $playTime = $textPlayTime.Text
-            if ( -Not ($playTime -match '^[0-9]{0,5} Hr [0-5]{0,1}[0-9]{1} Min$') ) {
-                ShowMessage "Incorrect Playtime Format. Enter exactly 'x Hr y Min'." "OK" "Error"
-                $listBox.SetSelected($currentlySelectedIndex, $true)
-                return
-            }
-            $playTimeInMin = ([int]$playTime.Split(" ")[0] * 60) + [int]$playTime.Split(" ")[2]
-
             $gameExeName = $textExe.Text -replace ".exe"
 
             $gameStatus = ""
@@ -277,7 +304,7 @@ function RenderEditGameForm($GamesList) {
 
             $gameCompleteStatus = if ($checkboxCompleted.Checked -or $gameStatus -ne "") { "TRUE" } else { "FALSE" }
 
-            UpdateGameOnEdit -OriginalGameName $textOriginalGameName.Text -GameName $gameName -GameExeName $gameExeName -GameIconPath $pictureBoxImagePath.Text -GamePlayTime $playTimeInMin -GameCompleteStatus $gameCompleteStatus -GamePlatform $textPlatform.Text -GameStatus $gameStatus -GameIdleDetection $checkboxIdleDetection.Checked
+            UpdateGameOnEdit -OriginalGameName $textOriginalGameName.Text -GameName $gameName -GameExeName $gameExeName -GameIconPath $pictureBoxImagePath.Text -GameColorHex $textGameColor.Text -GameCompleteStatus $gameCompleteStatus -GamePlatform $textPlatform.Text -GameStatus $gameStatus -GameIdleDetection $checkboxIdleDetection.Checked
 
             ShowMessage "Updated '$gameName' in Database." "OK" "Asterisk"
             $buttonOK.Enabled = $false
