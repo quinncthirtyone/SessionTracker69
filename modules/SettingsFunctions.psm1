@@ -17,6 +17,7 @@ function FilterListBox {
 
 function RenderEditGameForm($GamesList) {
 
+    $workingDirectory = (Get-Location).Path
     $editGameForm = CreateForm "SessionTracker: Edit Game" 865 265 ".\icons\running.ico"
 
     $imagePath = "./icons/default.png"
@@ -193,8 +194,8 @@ function RenderEditGameForm($GamesList) {
     $buttonUpdateIcon = CreateButton "Update" 90 190
     $buttonUpdateIcon.Size = New-Object System.Drawing.Size(60, 23)
     $buttonUpdateIcon.Add_Click({
-            $downloadsDirectoryPath = (New-Object -ComObject Shell.Application).Namespace('shell:Downloads').Self.Path
-            $openFileDialog = OpenFileDialog "Select Game Icon File" 'Image (*.png, *.jpg, *.jpeg)|*.png;*.jpg;*.jpeg' $downloadsDirectoryPath
+            $iconsDirectoryPath = "$workingDirectory\icons"
+            $openFileDialog = OpenFileDialog "Select Game Icon File" 'Image (*.png, *.jpg, *.jpeg)|*.png;*.jpg;*.jpeg' $iconsDirectoryPath
             $result = $openFileDialog.ShowDialog()
             if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
                 $imagePath = ResizeImage $openFileDialog.FileName $textName.name
