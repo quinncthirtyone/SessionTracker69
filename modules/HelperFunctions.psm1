@@ -183,6 +183,7 @@ function CreateForm($Text, $SizeX, $SizeY, $IconPath) {
     $form.Icon = [System.Drawing.Icon]::new($IconPath)
     $form.Topmost = $true
     $form.ShowInTaskbar = $false
+    $form.MinimizeBox = $false
 
     return $form
 }
