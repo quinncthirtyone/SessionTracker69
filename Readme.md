@@ -27,7 +27,7 @@ A lightweight PowerShell-based tray application for Windows that tracks time spe
     - Backups folder in case of accidental data corruption.
 
 ## Installation Instructions
-1. Open a Powershell window as admin and run below command to allow powershell modules to load on your system. Choose `Yes` when prompted.
+1. Open a Powershell window as admin and run the following command to allow powershell modules to load on your system. Choose `Yes` when prompted.
     - `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
 2. Download ***SessionTracker.zip*** from the [latest release](https://github.com/quinncthirtyone/SessionTracker69/releases/latest).
